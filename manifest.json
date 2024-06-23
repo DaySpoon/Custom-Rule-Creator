@@ -1,0 +1,52 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "§l§aルールクリエーター[B]",
+    "description": "好きなルールを決めて楽しもう。",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "uuid": "e974caeb-91ac-4233-acf9-b5c8359303ee",
+    "min_engine_version": [
+      1,
+      19,
+      50
+    ]
+  },
+  "modules": [
+    {
+      "type": "script",
+      "description": "盗作や二次配布はしないでください",
+      "module_name": "@minecraft/server",
+      "version": [
+        3,
+        3,
+        1
+      ],
+      "uuid": "f77f6aa7-5907-4b3b-9f2e-661bb4b0ffd5",
+      "entry": "scripts/Main.js"
+    },
+    {
+      "version": [3, 3, 1],
+      "type": "data",
+      "uuid": "d1d088e3-82bc-48e0-89bb-9ce4abd0a1a8",
+      "description": "data module"
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "1.12.0-beta"
+    },
+    {
+      "module_name": "@minecraft/server-ui",
+      "version": "1.2.0-beta"
+    },
+    {
+      "module_name": "@minecraft/server-gametest",
+      "version": "1.0.0-beta"
+    }
+  ]
+}
