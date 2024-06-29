@@ -5,7 +5,7 @@
 
 ルールというのは「～したら～する」と言ったものです。
 
-ダウンロードリンクは下にあります。
+**ダウンロードリンクは下にあります。**
 ## 紹介動画(クリックするとyoutubeに飛びます)
 [![](https://media.discordapp.net/attachments/1036911468416872450/1256460972248399932/httpsdiscord.cominviteWuVMQbYaxt.png?ex=6680d9f7&is=667f8877&hm=be12e698d400c5b6cd2c34503adc36c759575baf6b80e8dc1cb5954bd578f5ec&=&format=webp&quality=lossless&width=1177&height=662)](https://youtu.be/rcW3l2CJnF8?si=NQOo8HAB-g6mZTNS)
 ## このアドオンについて(確認してください)
@@ -28,6 +28,7 @@
 ### 拡張パック(試験的機能)
 発動条件が**β1.0**から自分で細かく設定し、追加することができるようになりました！
 ## ダウンロードリンク
+リリースの下のassetsから上の.mcpack二つを選んでダウンロードしてください。
 [プレリリース版 β1.0](https://github.com/DaySpoon/Custom-Rule-Creator/releases/tag/%CE%B21.0)
 
 [正式リリース版](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
