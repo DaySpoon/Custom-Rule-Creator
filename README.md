@@ -29,6 +29,7 @@
 発動条件が**β1.0**から自分で細かく設定し、追加することができるようになりました！
 ## ダウンロードリンク
 リリースの下のassetsから上の.mcpack二つを選んでダウンロードしてください。
+
 [プレリリース版 β1.0](https://github.com/DaySpoon/Custom-Rule-Creator/releases/tag/%CE%B21.0)
 
 [正式リリース版](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
