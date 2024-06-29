@@ -34,6 +34,8 @@
 発動条件が**β1.0**から自分で細かく設定し、追加することができるようになりました！
 ## ダウンロードリンク
 リリースの下のassetsから上の.mcpack二つを選んでダウンロードしてください。
+> [!IMPORTANT]
+> 必ずワールドの実験からベータAPIを使用するをONにしてください！そうでないと機能しません！
 
 [プレリリース版 β1.0](https://github.com/DaySpoon/Custom-Rule-Creator/releases/tag/%CE%B21.0)
 
