@@ -22,10 +22,16 @@
 ## 機能
 このアドオンには更にセーブデータ機能などがあります。
 作ったルールを他のワールドに移したいときに便利ですが、それ以外特に使い道はありません。
-※リソースパックを導入してくれないと正常に動きません。
+> [!IMPORTANT]
+> リソースパックを導入してくれないと正常に動きません。
 ### 拡張パック(試験的機能)
 発動条件が**β1.0**から自分で細かく設定し、追加することができるようになりました！
 ## ダウンロードリンク
 [プレリリース版 β1.0](https://github.com/DaySpoon/Custom-Rule-Creator/releases/tag/%CE%B21.0)
 
 [正式リリース版](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
+
+[全バージョン](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
+
+> [!CAUTION]
+> 過去リリース版はダウンロードしただけでは使えなくなっています。マニフェストを更新し、エラー箇所を修正する必要があります。
