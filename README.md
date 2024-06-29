@@ -30,7 +30,7 @@
 
 [正式リリース版](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
 
-[全バージョン](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
+[全バージョン](https://github.com/DaySpoon/Custom-Rule-Creator/releases)
 
 > [!CAUTION]
 > 過去リリース版はダウンロードしただけでは使えなくなっています。マニフェストを更新し、エラー箇所を修正する必要があります。
