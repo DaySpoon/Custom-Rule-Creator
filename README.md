@@ -7,6 +7,7 @@
 イメージ↓
 ![画像](https://media.discordapp.net/attachments/1036911468416872450/1254408256311394367/image.png?ex=6679623a&is=667810ba&hm=1c63afb55e0d6013de83eb72051453c430b2344a44d362bbe9e035c0e2d3e7cd&=&format=webp&quality=lossless&width=920&height=662)
 ## 紹介動画
+![紹介動画](https://youtu.be/rcW3l2CJnF8?si=NQOo8HAB-g6mZTNS)
 ## このアドオンについて(確認してください)
 ### 禁止事項・注意
 * アドオンの二次配布・自作発言
