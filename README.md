@@ -7,9 +7,8 @@
 イメージ↓
 
 ![画像](https://media.discordapp.net/attachments/1036911468416872450/1254408256311394367/image.png?ex=6679623a&is=667810ba&hm=1c63afb55e0d6013de83eb72051453c430b2344a44d362bbe9e035c0e2d3e7cd&=&format=webp&quality=lossless&width=920&height=662)
-## 紹介動画
-[!['紹介動画']('https://github.com/DaySpoon/Custom-Rule-Creator/assets/170817353/33e6b4a1-8215-49b2-9b99-639bd598030f
-')]('https://youtu.be/rcW3l2CJnF8?si=NQOo8HAB-g6mZTNS')
+## 紹介動画(クリックするとyoutubeに飛びます)
+[![](https://media.discordapp.net/attachments/1036911468416872450/1256460972248399932/httpsdiscord.cominviteWuVMQbYaxt.png?ex=6680d9f7&is=667f8877&hm=be12e698d400c5b6cd2c34503adc36c759575baf6b80e8dc1cb5954bd578f5ec&=&format=webp&quality=lossless&width=1177&height=662)](https://youtu.be/rcW3l2CJnF8?si=NQOo8HAB-g6mZTNS)
 ## このアドオンについて(確認してください)
 ### 禁止事項・注意
 * アドオンの二次配布・自作発言
@@ -19,7 +18,7 @@
 ### 拡張パックについての注意
 * 自作した拡張パックの配布は可能ですが、アドオン作成者のyoutubeリンクやこのアドオンを作った人などの明記をしてください。
 * 自作した拡張パックを配布する際にはテキスト貼り付けでの配布をお願いします。
-* この拡張パックは試験的機能です。将来的にはシステムが変わる可能性があります。
+* この拡張パックは試験的機能です。将来的には拡張パック用アドオン形式を予定しています。
 ## 機能
 このアドオンには更にセーブデータ機能などがあります。
 作ったルールを他のワールドに移したいときに便利ですが、それ以外特に使い道はありません。
