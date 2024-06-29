@@ -20,7 +20,7 @@ import { ActionFormData, MessageFormData, ModalFormData } from "@minecraft/serve
 作った拡張パックは配布することができます。ただしアドオン作成者のyoutubeリンクやこのアドオンを作った人などの明記をしてください。
 By DaySpからぁげぇい
 youtubeリンク:https://www.youtube.com/channel/UCK4Nbt4uT9L57PgM_euvnZQ
-githubリンク:
+githubリンク:https://github.com/DaySpoon/Custom-Rule-Creator
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 ここに追加したいコードを書くか、コピペで持ってくることができます
 */
@@ -67,12 +67,16 @@ const pack = [
                 let ui = new ModalFormData()
                 ui.title("特定のスコア設定")
                 ui.textField("このスコアで検知", "Scoreboard")
-                ui.slider("この値で検知", 0, 1000, 1)
+                ui.slider("この値で検知", 1, 1000, 1)
                 ui.show(sender).then(({ formValues, canceled }) => {
                     if (canceled) return;
                     if (formValues[0] !== undefined) {
                         rule.Scoreboard = formValues[0];
                         rule.Score = formValues[1];
+                        rule.Json = {
+                            Scoreboard: formValues[0],
+                            Score:formValues[1]
+                        }
                         ruleData(sender, owner, runData, rule)
                     }
                     else {
@@ -89,7 +93,7 @@ const pack = [
                         if (world.scoreboard.getObjective(r.Scoreboard).getScore(sender.scoreboardIdentity)) {
                             const score = world.scoreboard.getObjective(r.Scoreboard).getScore(sender.scoreboardIdentity)
                             if (score === r.Score) {
-                                event(sender, owner, CallID, `Score`, r.Score)
+                                event(sender, owner, CallID, `Json`, r.Json)
                             }
                         }
                         else {
@@ -487,15 +491,24 @@ function ruleData(sender, first, runData, rule) {
 * 指定したルールデータを取得します
 * @param {Player} owner オーナー
 * @param {Number} CallID 呼びだされたルールデータID 
+* @param {Boolean} getRawData JSON形式のデータ 
 */
-function getRuleDatas(owner, CallID) {
+function getRuleDatas(owner, CallID, getRawData = false) {
     if (owner.getTags().find((tag, i) => tag.startsWith(`{"if":${CallID},`))) {
         const rules = owner.getTags().filter((tag, i) => tag.startsWith(`{"if":${CallID},`))
         let datas = []
-        rules.forEach((tag, i) => {
-            datas.push(JSON.parse(tag))
-        })
-        return datas;
+        if(!getRawData) {
+            rules.forEach((tag, i) => {
+                datas.push(JSON.parse(tag))
+            })
+            return datas;
+        }
+        else {
+            rules.forEach((tag, i) => {
+                datas.push(tag)
+            })
+            return datas;
+        }
     }
     else return undefined;
 }

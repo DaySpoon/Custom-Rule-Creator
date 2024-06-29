@@ -1828,7 +1828,7 @@ export function event(sender = Player.prototype, first = Player.prototype, index
                     }
                     let pars = getRandom(1, 100)
                     try {
-                        if (rule[variable] === variableData || v === false) {
+                        if (JSON.stringify(rule[variable]) === JSON.stringify(variableData) || v === false) {
                             system.run(() => {
                                 if (pars <= rule.par) {
                                     try {
@@ -2210,6 +2210,8 @@ export function event(sender = Player.prototype, first = Player.prototype, index
 
                                 }
                             })
+                        }
+                        else {
                         }
                     } catch (e) {
 
