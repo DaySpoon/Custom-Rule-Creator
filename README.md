@@ -5,6 +5,11 @@
 
 ルールというのは「～したら～する」と言ったものです。
 
+> [!CAUTION]
+> 使い方次第ではワールドが崩壊する恐れがあります。バックアップを取るなどして使用するようにしてください。
+> 
+> また、このアドオンは使い方を誤まるとデバイスにとても負荷がかかり、最悪マイクラがクラッシュします。
+
 **ダウンロードリンクは下にあります。**
 ## 紹介動画(クリックするとyoutubeに飛びます)
 [![](https://media.discordapp.net/attachments/1036911468416872450/1256460972248399932/httpsdiscord.cominviteWuVMQbYaxt.png?ex=6680d9f7&is=667f8877&hm=be12e698d400c5b6cd2c34503adc36c759575baf6b80e8dc1cb5954bd578f5ec&=&format=webp&quality=lossless&width=1177&height=662)](https://youtu.be/rcW3l2CJnF8?si=NQOo8HAB-g6mZTNS)
