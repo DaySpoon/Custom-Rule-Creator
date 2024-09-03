@@ -1,4 +1,4 @@
-# Custom Rule Creator Addon 🔨
+# Custom Rule Creator Addon β1.2!! 🔨
 **1000通り以上の組み合わせ。**
 
 このアドオンは自分達でルールを決めることができます。権限がある状態で棒を右クリックするとメニューを開くことができ、そこでルールを決めることができます。
@@ -11,8 +11,6 @@
 > また、このアドオンは使い方を誤まるとデバイスにとても負荷がかかり、最悪マイクラがクラッシュします。
 
 **ダウンロードリンクは下にあります。**
-## 紹介動画(クリックするとyoutubeに飛びます)
-[![](https://media.discordapp.net/attachments/1036911468416872450/1256460972248399932/httpsdiscord.cominviteWuVMQbYaxt.png?ex=6680d9f7&is=667f8877&hm=be12e698d400c5b6cd2c34503adc36c759575baf6b80e8dc1cb5954bd578f5ec&=&format=webp&quality=lossless&width=1177&height=662)](https://youtu.be/rcW3l2CJnF8?si=NQOo8HAB-g6mZTNS)
 ## このアドオンについて(確認してください)
 > [!Note]
 > 本アドオンは現在ベータ版です。Gametestのベータモジュールを使用しているため、マインクラフトをアップデートされた際に使用できなくなる可能性があります。また、予期せぬバグやクラッシュが発生する可能性もあります。その場合はアドオン開発者にてお知らせください。
@@ -37,20 +35,20 @@
 > [!IMPORTANT]
 > 必ずワールドの実験からベータAPIを使用するをONにしてください！そうでないと機能しません！
 
-[プレリリース版 β1.0](https://github.com/DaySpoon/Custom-Rule-Creator/releases/tag/%CE%B21.0)
+[最新リリース版](https://github.com/DaySpoon/Custom-Rule-Creator/releases/)
 
-[正式リリース版](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
+[最新正式リリース版](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
 
 [全バージョン](https://github.com/DaySpoon/Custom-Rule-Creator/releases)
 
 > [!CAUTION]
 > 過去リリース版はダウンロードしただけでは使えなくなっています。マニフェストを更新し、エラー箇所を修正する必要があります。
 ## 将来的に実装・変更する予定のもの
-- [ ] Tag機構からDynamicProperty機構への移行
+- [x] Tag機構からDynamicProperty機構への移行
 - [ ] 拡張パックを.addon形式への変更
 - [ ] 更なる種類の発動条件の追加
 - [ ] 更なる種類の実行の追加
 - [ ] 安定版の配布
-- [ ] デバッグ機能追加
+- [x] デバッグ機能追加
 - [ ] 固有のルールIDの保持
 - [ ] 実行関連の拡張パックの追加
