@@ -1,7 +1,7 @@
 {
   "format_version": 2,
   "header": {
-    "name": "§l§aルールクリエーター[B]",
+    "name": "§l§aルールクリエーター[B] β1.2",
     "description": "好きなルールを決めて楽しもう。",
     "version": [
       1,
@@ -25,13 +25,13 @@
         3,
         1
       ],
-      "uuid": "f77f6aa7-5907-4b3b-9f2e-661bb4b0ffd5",
+      "uuid": "39583039-ac19-47bb-a9d6-95c025e83b35",
       "entry": "scripts/Mains.js"
     },
     {
       "version": [3, 3, 1],
       "type": "data",
-      "uuid": "d1d088e3-82bc-48e0-89bb-9ce4abd0a1a8",
+      "uuid": "6f8876fc-6b58-4dbf-999b-0416948c8033",
       "description": "data module"
     }
   ],
