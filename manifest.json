@@ -26,7 +26,7 @@
         1
       ],
       "uuid": "f77f6aa7-5907-4b3b-9f2e-661bb4b0ffd5",
-      "entry": "scripts/Main.js"
+      "entry": "scripts/Mains.js"
     },
     {
       "version": [3, 3, 1],
@@ -38,15 +38,15 @@
   "dependencies": [
     {
       "module_name": "@minecraft/server",
-      "version": "1.12.0-beta"
+      "version": "2.0.0-alpha"
     },
     {
       "module_name": "@minecraft/server-ui",
-      "version": "1.2.0-beta"
+      "version": "2.0.0-alpha"
     },
     {
       "module_name": "@minecraft/server-gametest",
-      "version": "1.0.0-beta"
+      "version": "2.0.0-alpha"
     }
   ]
 }

@@ -1,7 +1,7 @@
 //このアドオンの色々な設定です。変数の型が違うとエラーが起こります。
 
 // アドオン拡張機能設定
-const enableExpansionPack = false; // 真偽値
+const enableExpansionPack = true; // 真偽値
 
 // アドオン基本設定
 const mobLimit = 120; // 整数値
