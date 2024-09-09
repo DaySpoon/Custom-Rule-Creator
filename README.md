@@ -1,5 +1,9 @@
-# Custom Rule Creator Addon β1.2!! 🔨
-**1000通り以上の組み合わせ。**
+![addon](https://media.discordapp.net/attachments/1115220489141497908/1282670652360228914/httpsdiscord.cominviteWuVMQbYaxt.png?ex=66e033a2&is=66dee222&hm=c57e3d7c35b4376743c8eab6f3e57de7eb129241027c44f8daaa1962f1e2be30&=&format=webp&quality=lossless&width=1000&height=550)
+# Custom Rule Creator Addon β1.5!! 🔨
+### β1.5
+更なる発動条件や実行、フィルター機能などが追加されました！
+
+**2000通り以上の組み合わせ。**
 
 このアドオンは自分達でルールを決めることができます。権限がある状態で棒を右クリックするとメニューを開くことができ、そこでルールを決めることができます。
 
@@ -50,8 +54,8 @@
 ## 将来的に実装・変更する予定のもの
 - [x] Tag機構からDynamicProperty機構への移行
 - [ ] 拡張パックを.addon形式への変更
-- [ ] 更なる種類の発動条件の追加
-- [ ] 更なる種類の実行の追加
+- [x] 更なる種類の発動条件の追加
+- [x] 更なる種類の実行の追加
 - [ ] 安定版の配布
 - [x] デバッグ機能追加
 - [ ] 固有のルールIDの保持
