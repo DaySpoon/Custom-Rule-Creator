@@ -573,6 +573,7 @@ world.afterEvents.itemUse.subscribe(data => {
                         ui.title("§eランダムなルール")
                         ui.slider("作成する数", 1, 10, 1, 5)
                         ui.toggle("前のルールを全て削除してから作る", false)
+                        ui.toggle("ランダムフィルター機能", false)
                         ui.show(sender).then(({ formValues, canceled }) => {
                             if (canceled) return;
                             if (formValues[1]) {
@@ -583,16 +584,36 @@ world.afterEvents.itemUse.subscribe(data => {
                                 world.setDynamicProperty("CRC:rules", JSON.stringify(data))
                             }
                             for (let i = 0; i < formValues[0]; i++) {
-                                let rule_obj = {
-                                    if: getRandom(0, rule.length - 1),
-                                    run: getRandom(0, rule2.length - 1),
-                                    filter: {
-                                        enable: false,
-                                        except: false,
-                                        entites: null
-                                    },
-                                    par: getRandom(1, 100),
-                                    id: password(6)
+                                let rule_obj;
+                                if (formValues[2] === true) {
+                                    let enti = []
+                                    for (let i = 0; i < getRandom(2, getRandom(3, 20)); i++) {
+                                        enti.push(random[getRandom(0, random.length - 1)])
+                                    }
+                                    rule_obj = {
+                                        if: getRandom(0, rule.length - 1),
+                                        run: getRandom(0, rule2.length - 1),
+                                        filter: {
+                                            enable: getRandomBool(),
+                                            except: getRandomBool(),
+                                            entites: enti
+                                        },
+                                        par: getRandom(1, 100),
+                                        id: password(6)
+                                    }
+                                }
+                                else {
+                                    rule_obj = {
+                                        if: getRandom(0, rule.length - 1),
+                                        run: getRandom(0, rule2.length - 1),
+                                        filter: {
+                                            enable: false,
+                                            except: false,
+                                            entites: null
+                                        },
+                                        par: getRandom(1, 100),
+                                        id: password(6)
+                                    }
                                 }
                                 if (rule2[rule_obj.run] === "重力を加える") {
                                     let rule2_obj = {
