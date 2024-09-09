@@ -1,11 +1,11 @@
-import { world, system, WeatherType, ItemStack, MolangVariableMap, Player, BlockTypes, EffectTypes, EntityTypes, ItemTypes, WorldAfterEvents, EntityHurtAfterEvent, WorldBeforeEvents, Block, GameMode } from "@minecraft/server"
+import { world, system, WeatherType, ItemStack, MolangVariableMap, Player, BlockTypes, EffectTypes, EntityTypes, ItemTypes, WorldAfterEvents, EntityHurtAfterEvent, WorldBeforeEvents, Block, GameMode, DyeColor, Entity, EntityDamageCause, HudElement, HudElementsCount, EasingType, EffectType, DimensionTypes, DimensionType } from "@minecraft/server"
 import { ActionFormData, ModalFormData, MessageFormData } from "@minecraft/server-ui"
-import { EntityMaxDistance, EntityMinDistance, PlayerMaxDistance, PlayerMinDistance, mobLimit } from "./config";
+import { EntityMaxDistance, EntityMinDistance, PlayerMaxDistance, PlayerMinDistance, enableAddonStatus, mobLimit } from "./config";
 import { pack } from "./Expansion_pack/Pack";
 import { enableExpansionPack } from "./config";
 // 弄らないでください
 //定義
-const Version = "β1.2"
+const Version = "β1.5"
 const AddonName = "CRC"
 let error = false;
 export const rule = [
@@ -55,6 +55,24 @@ export const rule = [
     "下を見たら",
     "プレイヤーがエモートしたら",
     "プレイヤーがゲームモードを変更したら",
+    "奈落に落ちたら",
+    "最高高度に達しているなら",
+    "ターゲットにされているなら",
+    "エンティティのターゲットなら",
+    "頭上のブロックが空気なら",
+    "頭上のブロックが空気じゃないなら",
+    "ワールドに参加したら",
+    "プレイヤーの操作が制御されているなら",
+    "体力の数値が変動したら",
+    "エンティティが読み込まれたら",
+    "ブロックを爆発したら",
+    "ブロックが爆発されたら",
+    "イベントがトリガーしたら",
+    "プレイヤーが退出したら",
+    "エンティティがデスポーンしたら",
+    "エンティティが爆発したブロックなら",
+    "サーバーからのメッセージが返されたとき",
+    "プレイヤーからメッセージが送られたとき",
     "10秒おきに",
     "30秒おきに",
     "60秒おきに"
@@ -83,6 +101,15 @@ export const rule2 = [
     "ランダムなプレイヤーと位置を入れ替える",
     "時間を早送りにする",
     "時間を巻き戻しにする",
+    "リスポーン地点に戻る",
+    "ランダムなエフェクトを付与する",
+    "テレポートする",
+    "アイテムをスポーンさせる",
+    "ランダムな範囲でテレポートする",
+    "速度を加える(プレイヤー以外)",
+    "パーティクルを表示する",
+    "ランダムなパーティクルを表示する",
+    "ランダムなエンティティをスポーン"
 ]
 export let r = []
 export let s = []
@@ -104,36 +131,196 @@ export const random = EntityTypes.getAll().map((b) => b.id)
 export const random2 = EffectTypes.getAll().map((b) => b.getName())
 export const random3 = BlockTypes.getAll().map((b) => b.id)
 export const random4 = ItemTypes.getAll().map((b) => b.id)
+export const cause = [
+    EntityDamageCause.anvil,
+    EntityDamageCause.blockExplosion,
+    EntityDamageCause.campfire,
+    EntityDamageCause.charging,
+    EntityDamageCause.contact,
+    EntityDamageCause.drowning,
+    EntityDamageCause.entityAttack,
+    EntityDamageCause.entityExplosion,
+    EntityDamageCause.fall,
+    EntityDamageCause.fallingBlock,
+    EntityDamageCause.fire,
+    EntityDamageCause.fireTick,
+    EntityDamageCause.fireworks,
+    EntityDamageCause.flyIntoWall,
+    EntityDamageCause.freezing,
+    EntityDamageCause.lava,
+    EntityDamageCause.lightning,
+    EntityDamageCause.magic,
+    EntityDamageCause.magma,
+    EntityDamageCause.none,
+    EntityDamageCause.override,
+    EntityDamageCause.piston,
+    EntityDamageCause.projectile,
+    EntityDamageCause.ramAttack,
+    EntityDamageCause.selfDestruct,
+    EntityDamageCause.sonicBoom,
+    EntityDamageCause.soulCampfire,
+    EntityDamageCause.stalactite,
+    EntityDamageCause.stalagmite,
+    EntityDamageCause.starve,
+    EntityDamageCause.suffocation,
+    EntityDamageCause.temperature,
+    EntityDamageCause.thorns,
+    EntityDamageCause.void,
+    EntityDamageCause.wither,
+]
+export const particles = [
+    "minecraft:arrow_spell_emitter",
+    "minecraft:balloon_gas_particle	",
+    "minecraft:basic_bubble_particle",
+    "minecraft:basic_bubble_particle_manual",
+    "minecraft:basic_crit_particle",
+    "minecraft:basic_flame_particle	",
+    "minecraft:basic_smoke_particle",
+    "minecraft:bleach",
+    "minecraft:bubble_column_bubble",
+    "minecraft:bubble_column_down_particle",
+    "minecraft:bubble_column_up_particle",
+    "minecraft:camera_shoot_explosion",
+    "minecraft:campfire_smoke_particle",
+    "minecraft:campfire_tall_smoke_particle",
+    "minecraft:cauldron_bubble_particle",
+    "minecraft:cauldron_splash_particle",
+    "minecraft:cauldron_spell_emitter",
+    "minecraft:colored_flame_particle",
+    "minecraft:conduit_particle",
+    "minecraft:conduit_absorb_particle",
+    "minecraft:conduit_attack_emitter",
+    "minecraft:critical_hit_emitter",
+    "minecraft:dolphin_move_particle",
+    "minecraft:dragon_breath_fire",
+    "minecraft:dragon_breath_lingering",
+    "minecraft:dragon_breath_trail",
+    "minecraft:dragon_death_explosion_emitter",
+    "minecraft:dragon_destroy_block",
+    "minecraft:dragon_dying_explosion",
+    "minecraft:enchanting_table_particle",
+    "minecraft:end_chest",
+    "minecraft:endrod",
+    "minecraft:elephant_tooth_paste_vapor_particle",
+    "minecraft:evocation_fang_particle",
+    "minecraft:evoker_spell",
+    "minecraft:cauldron_explosion_emitter",
+    "minecraft:death_explosion_emitter",
+    "minecraft:egg_destroy_emitter",
+    "minecraft:eyeofender_death_explode_particle",
+    "minecraft:misc_fire_vapor_particle",
+    "minecraft:explosion_particle",
+    "minecraft:explosion_manual",
+    "minecraft:eye_of_ender_bubble_particle",
+    "minecraft:falling_border_dust_particle",
+    "minecraft:falling_dust",
+    "minecraft:falling_dust_concrete_powder_particle",
+    "minecraft:falling_dust_dragon_egg_particle",
+    "minecraft:falling_dust_gravel_particle",
+    "minecraft:falling_dust_red_sand_particle",
+    "minecraft:falling_dust_sand_particle",
+    "minecraft:falling_dust_scaffolding_particle",
+    "minecraft:falling_dust_top_snow_particle",
+    "minecraft:fish_hook_particle",
+    "minecraft:fish_pos_particle",
+    "minecraft:guardian_attack_particle",
+    "minecraft:guardian_water_move_particle",
+    "minecraft:heart_particle",
+    "minecraft:huge_explosion_lab_misc_emitter",
+    "minecraft:huge_explosion_emitter",
+    "minecraft:ice_evaporation_emitter",
+    "minecraft:ink_emitter",
+    "minecraft:knockback_roar_particle",
+    "minecraft:lab_table_heatblock_dust_particle",
+    "minecraft:lab_table_misc_mystical_particle",
+    "minecraft:large_explosion",
+    "minecraft:lava_drip_particle",
+    "minecraft:lava_particle",
+    "minecraft:llama_spit_smoke",
+    "minecraft:magnesium_salts_emitter",
+    "minecraft:mob_block_spawn_emitter",
+    "minecraft:mob_portal",
+    "minecraft:mobflame_single",
+    "minecraft:mobspell_emitter",
+    "minecraft:mycelium_dust_particle",
+    "minecraft:note_particle",
+    "minecraft:obsidian_glow_dust_particle",
+    "minecraft:phantom_trail_particle",
+    "minecraft:portal_directional",
+    "minecraft:portal_east_west",
+    "minecraft:portal_north_south",
+    "minecraft:rain_splash_particle",
+    "minecraft:redstone_ore_dust_particle",
+    "minecraft:redstone_repeater_dust_particle",
+    "minecraft:redstone_torch_dust_particle",
+    "minecraft:rising_border_dust_particle",
+    "minecraft:shulker_bullet",
+    "minecraft:silverfish_grief_emitter",
+    "minecraft:sparkler_emitter",
+    "minecraft:splash_spell_emitter",
+    "minecraft:sponge_absorb_water_particle",
+    "minecraft:squid_flee_particle",
+    "minecraft:squid_ink_bubble",
+    "minecraft:squid_move_particle",
+    "minecraft:stunned_emitter",
+    "minecraft:totem_particle",
+    "minecraft:totem_manual",
+    "minecraft:underwater_torch_particle",
+    "minecraft:villager_angry",
+    "minecraft:villager_happy",
+    "minecraft:water_drip_particle",
+    "minecraft:water_evaporation_actor_emitter",
+    "minecraft:water_evaporation_bucket_emitter",
+    "minecraft:water_evaporation_manual",
+    "minecraft:water_splash_particle_manual",
+    "minecraft:water_splash_particle",
+    "minecraft:water_wake_particle",
+    "minecraft:wither_boss_invulnerable"
+]
 //セットアップ用
-if (!world.getDynamicProperty("CRC:rules")) {
-    const datas = {
-        rule: [],
-        subRule: []
-    }
-    world.setDynamicProperty("CRC:rules", JSON.stringify(datas))
-}
 world.afterEvents.playerSpawn.subscribe((data) => {
     if (data.initialSpawn) {
-        if (data.player.id === '-4294967295' && !data.player.hasTag("owner")) {
-            world.sendMessage("§l§a[CRC] セットアップが完了しました！")
-            data.player.addTag("owner")
+        if (world.getDynamicProperty("CRC:rules") === undefined) {
+            try {
+                const datas = {
+                    rule: [],
+                    subRule: []
+                }
+                world.setDynamicProperty("CRC:rules", JSON.stringify(datas))
+                world.setDynamicProperty("FallingBlock", false)
+                world.setDynamicProperty("Item", false)
+                world.setDynamicProperty("Xp", false)
+                world.setDynamicProperty("EntityKill", true)
+                world.setDynamicProperty("Stop", false)
+                world.setDynamicProperty("void_detect", -64)
+                world.setDynamicProperty("sky_detect", 320)
+                world.setDynamicProperty("spawnY", 70)
+                system.runTimeout(() => {
+                    world.sendMessage(`§l§e[${AddonName} ${Version}] セットアップが完了しました！`)
+                    world.sendMessage(`§l§e[${AddonName} ${Version}] 権限者が棒を持って右クリックすることでメニューが開けます。`)
+                    data.player.playSound("random.levelup", { volume: 1, pitch: 1 })
+                }, 40)
+            } catch (e) {
+                world.sendMessage(`§l§c[${AddonName} ${Version}] エラーが発生しました。下記のエラーをアドオン製作者に報告してください。\n\n${e}`)
+            }
         }
-        if (!world.getDynamicProperty("FallingBlock")) {
-            world.setDynamicProperty("FallingBlock", false)
+        if (data.player.getDynamicProperty("indying") === true) {
+            data.player.onScreenDisplay.resetHudElements()
+            data.player.camera.clear()
+            data.player.inputPermissions.movementEnabled = true
+            data.player.setDynamicProperty("indying", false)
         }
-        if (!world.getDynamicProperty("Item")) {
-            world.setDynamicProperty("Item", false)
+        if (data.player.getDynamicProperty("indying2") === true) {
+            data.player.onScreenDisplay.resetHudElements()
+            data.player.camera.clear()
+            data.player.setDynamicProperty("indying2", false)
         }
-        if (!world.getDynamicProperty("Xp")) {
-            world.setDynamicProperty("Xp", false)
-        }
-        if (!world.getDynamicProperty("EntityKill")) {
-            world.setDynamicProperty("EntityKill", true)
-        }
-        if (!world.getDynamicProperty("Stop")) {
-            world.setDynamicProperty("Stop", false)
-        }
-        data.player.sendMessage(`${enableExpansionPack ? `§e拡張パック導入済：${packs.length}個のパックがあります` : ``}`)
+        system.runTimeout(() => {
+            if (enableAddonStatus) {
+                data.player.sendMessage(`§l§a[${AddonName} ${Version}] §r§a現在アドオンが導入されています。\n§a製作者のリンク: https://www.youtube.com/@user-dayspoonkarkar\n§aダウンロードリンク: https://github.com/DaySpoon/Custom-Rule-Creator/releases`)
+            }
+            data.player.sendMessage(`${enableExpansionPack ? `§l§2[${AddonName} ${Version}] §r§e拡張パック導入済：${packs.length}個のパックがあります` : ``}`)
+        }, 40)
     }
 })
 //ここから下はシステムです
@@ -211,34 +398,87 @@ world.afterEvents.itemUse.subscribe(data => {
                         ui.title("作成")
                         ui.dropdown("もし", rules)
                         ui.dropdown("これを実行", rule2)
+                        ui.toggle("フィルター機能", false)
                         ui.slider("確率", 1, 100, 1, 100)
                         ui.show(sender).then(({ formValues, canceled }) => {
                             if (canceled) return;
                             let rule = {
                                 if: formValues[0],
                                 run: formValues[1],
-                                par: formValues[2],
+                                filter: {
+                                    enable: formValues[2],
+                                    except: false,
+                                    entites: null
+                                },
+                                par: formValues[3],
                                 id: password(6)
                             }
-                            if (old_rule.length > formValues[0]) {
-                                ruleData(sender, rule2[formValues[1]], rule)
-                            }
-                            else {
-                                if (enableExpansionPack === true) {
-                                    let first = undefined
-                                    if (world.getDynamicProperty("CRC:rules")) {
-                                        first = JSON.parse(world.getDynamicProperty("CRC:rules"))
-                                    }
-                                    let i = formValues[0] - old_rule.length
-                                    if (pack[i].ruleForm.enable) {
-                                        pack[i].ruleForm.form(sender, first, formValues, rule2[formValues[1]], rule)
+                            if (formValues[2] === true) {
+                                let ui = new ModalFormData()
+                                ui.title("フィルター機能")
+                                ui.textField("エンティティId(複数追加可能)", "ex:minecraft:zombie,minecraft:creeper")
+                                ui.toggle("上記のエンティティ以外を検知する", false)
+                                ui.show(sender).then(({ formValues, canceled }) => {
+                                    if (canceled) return;
+                                    if (isNaN(formValues[0])) {
+                                        const entites = formValues[0].split(",")
+                                        let rand = random
+                                        if (formValues[1] === true) {
+                                            try {
+                                                // entites.forEach((type) => {
+                                                //     if (rand.find((t) => t === type)) {
+                                                //         const i = rand.findIndex((t) => t === type)
+                                                //         rand.splice(i, 1)
+                                                //     }
+                                                // })
+                                                // rule.filter.entites = rand
+                                                rule.filter.except = true
+                                                rule.filter.entites = entites
+                                                sender.sendMessage("§aフィルター登録をしました。")
+                                                datase()
+                                            } catch (e) {
+                                                sender.sendMessage(`§cエラーが発生しました。`)
+                                            }
+                                        }
+                                        else {
+                                            try {
+                                                rule.filter.entites = entites
+                                                sender.sendMessage("§aフィルター登録をしました。")
+                                                datase()
+                                            } catch (e) {
+                                                sender.sendMessage(`§cエラーが発生しました。`)
+                                            }
+                                        }
                                     }
                                     else {
-                                        ruleData(sender, rule2[formValues[1]], rule)
+                                        sender.sendMessage("§cエンティティIdを入力してください。")
                                     }
+                                })
+                            }
+                            else {
+                                datase()
+                            }
+                            function datase() {
+                                if (old_rule.length > formValues[0]) {
+                                    ruleData(sender, rule2[formValues[1]], rule)
                                 }
                                 else {
-                                    sender.sendMessage("§cエラーが発生しました。")
+                                    if (enableExpansionPack === true) {
+                                        let first = undefined
+                                        if (world.getDynamicProperty("CRC:rules")) {
+                                            first = JSON.parse(world.getDynamicProperty("CRC:rules"))
+                                        }
+                                        let i = formValues[0] - old_rule.length
+                                        if (pack[i].ruleForm.enable) {
+                                            pack[i].ruleForm.form(sender, first, formValues, rule2[formValues[1]], rule)
+                                        }
+                                        else {
+                                            ruleData(sender, rule2[formValues[1]], rule)
+                                        }
+                                    }
+                                    else {
+                                        sender.sendMessage("§cエラーが発生しました。")
+                                    }
                                 }
                             }
                         })
@@ -267,7 +507,7 @@ world.afterEvents.itemUse.subscribe(data => {
                                     let parse = rule1[formValues[0]]
                                     let dt = []
                                     let subrule = [];
-                                    if (parse.run === 0 || parse.run === 2 || parse.run === 4 || parse.run === 5 || parse.run === 6 || parse.run === 8 || parse.run === 9 || parse.run === 10 || parse.run === 12 || parse.run === 13 || parse.run === 15 || parse.run === 16 || parse.run === 17 || parse.run === 21 || parse.run === 22) {
+                                    if (parse.run === 0 || parse.run === 2 || parse.run === 4 || parse.run === 5 || parse.run === 6 || parse.run === 8 || parse.run === 9 || parse.run === 10 || parse.run === 12 || parse.run === 13 || parse.run === 15 || parse.run === 16 || parse.run === 17 || parse.run === 21 || parse.run === 22 || parse.run === 25 || parse.run === 26 || parse.run === 27 || parse.run === 28 || parse.run === 29) {
                                         let subs;
                                         const sr = JSON.parse(world.getDynamicProperty("CRC:rules")).subRule
                                         sr.forEach((s) => {
@@ -289,6 +529,11 @@ world.afterEvents.itemUse.subscribe(data => {
                                         if (parse.run === 18) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
                                         if (parse.run === 21) subs = subrule.filter((tag, i) => tag.startsWith(`{"time`))
                                         if (parse.run === 22) subs = subrule.filter((tag, i) => tag.startsWith(`{"time`))
+                                        if (parse.run === 25) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
+                                        if (parse.run === 26) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
+                                        if (parse.run === 27) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
+                                        if (parse.run === 28) subs = subrule.filter((tag, i) => tag.startsWith(`{"particle`))
+                                        if (parse.run === 29) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
                                         subs.forEach((tag) => {
                                             dt.push(JSON.parse(tag))
                                         })
@@ -341,6 +586,11 @@ world.afterEvents.itemUse.subscribe(data => {
                                 let rule_obj = {
                                     if: getRandom(0, rule.length - 1),
                                     run: getRandom(0, rule2.length - 1),
+                                    filter: {
+                                        enable: false,
+                                        except: false,
+                                        entites: null
+                                    },
                                     par: getRandom(1, 100),
                                     id: password(6)
                                 }
@@ -371,7 +621,9 @@ world.afterEvents.itemUse.subscribe(data => {
                                 }
                                 else if (rule2[rule_obj.run] === "ダメージを与える") {
                                     let rule2_obj = {
-                                        damage: getRandom(1, 40),
+                                        damage: getRandom(0, 40),
+                                        causes: cause[getRandom(0, cause.length - 1)],
+                                        entitytype: random[0, random.length - 1],
                                         id: rule_obj.id
                                     }
                                     setter(rule_obj, rule2_obj)
@@ -460,6 +712,15 @@ world.afterEvents.itemUse.subscribe(data => {
                                     }
                                     setter(rule_obj, rule2_obj)
                                 }
+                                else if (rule2[rule_obj.run] === "ランダムなアイテムをスポーンさせる") {
+                                    let rule2_obj = {
+                                        x: getRandom(-100, 100, true),
+                                        y: getRandom(0, 320, true),
+                                        z: getRandom(-100, 100, true),
+                                        id: rule_obj.id
+                                    }
+                                    setter(rule_obj, rule2_obj)
+                                }
                                 else if (rule2[rule_obj.run] === "時間を早送りにする") {
                                     let rule2_obj = {
                                         time: getRandom(1, 10000, true),
@@ -471,6 +732,71 @@ world.afterEvents.itemUse.subscribe(data => {
                                     if (canceled) return;
                                     let rule2_obj = {
                                         time: getRandom(1, 10000, true),
+                                        id: rule_obj.id
+                                    }
+                                    setter(rule_obj, rule2_obj)
+                                }
+                                else if (rule2[rule_obj.run] === "テレポートする") {
+                                    let rule2_obj = {
+                                        x: getRandom(-5000, 5000, true),
+                                        y: getRandom(-64, 320, true),
+                                        z: getRandom(-5000, 5000, true),
+                                        dimensiontype: DimensionTypes.getAll()[getRandom(0, DimensionTypes.getAll().length - 1)].typeId,
+                                        keep: getRandomBool(),
+                                        check: getRandomBool(),
+                                        id: rule_obj.id
+                                    }
+                                    setter(rule_obj, rule2_obj)
+                                }
+                                else if (rule2[rule_obj.run] === "アイテムをスポーンさせる") {
+                                    let rule2_obj = {
+                                        x: getRandom(-100, 100, true),
+                                        y: getRandom(0, 320, true),
+                                        z: getRandom(-100, 100, true),
+                                        item: random4[getRandom(0, random4.length - 1)],
+                                        amount: getRandom(1, 64, true),
+                                        id: rule_obj.id
+                                    }
+                                    setter(rule_obj, rule2_obj)
+                                }
+                                else if (rule2[rule_obj.run] === "ランダムな範囲でテレポートする") {
+                                    let rule2_obj = {
+                                        x: getRandom(-100, 100, true),
+                                        y: getRandom(-64, 320, true),
+                                        z: getRandom(-100, 100, true),
+                                        dimensiontype: DimensionTypes.getAll()[getRandom(0, DimensionTypes.getAll().length - 1)].typeId,
+                                        keep: getRandomBool(),
+                                        check: getRandomBool(),
+                                        id: rule_obj.id
+                                    }
+                                    setter(rule_obj, rule2_obj)
+                                }
+                                else if (rule2[rule_obj.run] === "速度を加える(プレイヤー以外)") {
+                                    let rule2_obj = {
+                                        x: getRandom(-100, 100, false),
+                                        y: getRandom(-100, 100, false),
+                                        z: getRandom(-100, 100, false),
+                                        id: rule_obj.id
+                                    }
+                                    setter(rule_obj, rule2_obj)
+                                }
+                                else if (rule2[rule_obj.run] === "パーティクルを表示する") {
+                                    let rule2_obj = {
+                                        particle: particles[getRandom(0, particles.length - 1)],
+                                        x: getRandom(-10, 10),
+                                        y: getRandom(-10, 10),
+                                        z: getRandom(-10, 10),
+                                        visible: getRandomBool(),
+                                        id: rule_obj.id
+                                    }
+                                    setter(rule_obj, rule2_obj)
+                                }
+                                else if (rule2[rule_obj.run] === "ランダムなパーティクルを表示する") {
+                                    let rule2_obj = {
+                                        x: getRandom(-10, 10),
+                                        y: getRandom(-10, 10),
+                                        z: getRandom(-10, 10),
+                                        visible: getRandomBool(),
                                         id: rule_obj.id
                                     }
                                     setter(rule_obj, rule2_obj)
@@ -508,9 +834,86 @@ world.afterEvents.itemUse.subscribe(data => {
                     else {
                         let ui = new ActionFormData()
                         ui.title(`ルール${selection - 2}`)
-                        ui.body(`\nもし:${ruleNames[parse[selection - 3].if]}\n実行:${rule2[parse[selection - 3].run]}\n確率:${parse[selection - 3].par}パーセント\n\n\n\n\n`)
+                        ui.body(`\nもし: ${ruleNames[parse[selection - 3].if]}\n実行: ${rule2[parse[selection - 3].run]}\n確率: ${parse[selection - 3].par}パーセント\nフィルター: ${parse[selection - 3].filter.enable}\n検知対象: ${parse[selection - 3].filter.entites !== null ? parse[selection - 3].filter.entites.join(",") : "none"}${parse[selection - 3].filter.except === true ? "以外" : ""}\n\n\n`)
+                        // ui.button("ルールを変更する", "textures/ui/icon_setting")
                         ui.button("gui.close")
-                        ui.show(sender)
+                        ui.show(sender).then(({ selection, canceled }) => {
+                            if (canceled) return;
+                            // if(selection === 0) {
+                            //     let ui = new ModalFormData()
+                            //     ui.title("変更")
+                            //     ui.toggle("フィルター機能", parse[selection - 3].filter.enable)
+                            //     ui.slider("確率", 1, 100, 1, parse[selection - 3].par)
+                            //     ui.show(sender).then(({ formValues, canceled }) => {
+                            //         if(canceled) return;
+                            //         if(formValues[0] === true) {
+                            //             let ui = new ModalFormData()
+                            //             ui.title("フィルター機能")
+                            //             ui.textField("エンティティId(複数追加可能)", "ex:minecraft:zombie,minecraft:creeper", parse[selection - 3].filter.entites !== null ? parse[selection - 3].filter.entites.join(",") : "")
+                            //             ui.toggle("上記のエンティティ以外を検知する", parse[selection - 3].filter.except)
+                            //             ui.show(sender).then(({ formValues, canceled }) => {
+                            //                 if (canceled) return;
+                            //                 if (isNaN(formValues[0])) {
+                            //                     const entites = formValues[0].split(",")
+                            //                     let rand = random
+                            //                     if (formValues[1] === true) {
+                            //                         try {
+                            //                             // entites.forEach((type) => {
+                            //                             //     if (rand.find((t) => t === type)) {
+                            //                             //         const i = rand.findIndex((t) => t === type)
+                            //                             //         rand.splice(i, 1)
+                            //                             //     }
+                            //                             // })
+                            //                             // rule.filter.entites = rand
+                            //                             parse[selection - 3].filter.except = true
+                            //                             parse[selection - 3].filter.entites = entites
+                            //                             sender.sendMessage("§aフィルター登録をしました。")
+                            //                             setter()
+                            //                         } catch (e) {
+                            //                             sender.sendMessage(`§cエラーが発生しました。`)
+                            //                         }
+                            //                     }
+                            //                     else {
+                            //                         try {
+                            //                             parse[selection - 3].filter.entites = entites
+                            //                             sender.sendMessage("§aフィルター登録をしました。")
+                            //                             datase()
+                            //                         } catch (e) {
+                            //                             sender.sendMessage(`§cエラーが発生しました。`)
+                            //                         }
+                            //                     }
+                            //                 }
+                            //                 else {
+                            //                     sender.sendMessage("§cエンティティIdを入力してください。")
+                            //                 }
+                            //                 function datase() {
+                            //                     if (old_rule.length > parse[selection - 3].if) {
+                            //                         ruleData(sender, rule2[formValues[1]], rule)
+                            //                     }
+                            //                     else {
+                            //                         if (enableExpansionPack === true) {
+                            //                             let first = undefined
+                            //                             if (world.getDynamicProperty("CRC:rules")) {
+                            //                                 first = JSON.parse(world.getDynamicProperty("CRC:rules"))
+                            //                             }
+                            //                             let i = parse[selection - 3].if - old_rule.length
+                            //                             if (pack[i].ruleForm.enable) {
+                            //                                 pack[i].ruleForm.form(sender, first, formValues, rule2[parse[selection - 3].run], parse[selection - 3])
+                            //                             }
+                            //                             else {
+                            //                                 ruleData(sender, rule2[parse[selection - 3].run], parse[selection - 3])
+                            //                             }
+                            //                         }
+                            //                         else {
+                            //                             sender.sendMessage("§cエラーが発生しました。")
+                            //                         }
+                            //                     }
+                            //                 }
+                            //             })
+                            //         }
+                            //     })
+                            // }
+                        })
                     }
                 })
             }
@@ -1100,7 +1503,7 @@ world.afterEvents.itemUse.subscribe(data => {
                                     parse.forEach((rule, i) => {
                                         let sd = []
                                         let dll;
-                                        if (rule.run === 0 || rule.run === 2 || rule.run === 4 || rule.run === 5 || rule.run === 6 || rule.run === 8 || rule.run === 9 || rule.run === 10 || rule.run === 12 || rule.run === 13 || rule.run === 15 || rule.run === 16 || rule.run === 17 || rule.run === 18 || rule.run === 21 || rule.run === 22) {
+                                        if (rule.run === 0 || rule.run === 2 || rule.run === 4 || rule.run === 5 || rule.run === 6 || rule.run === 8 || rule.run === 9 || rule.run === 10 || rule.run === 12 || rule.run === 13 || rule.run === 15 || rule.run === 16 || rule.run === 17 || rule.run === 18 || rule.run === 21 || rule.run === 22 || parse.run === 25 || parse.run === 26 || parse.run === 27 || parse.run === 28 || parse.run === 29) {
                                             let subs = [];
                                             let subrule = [];
                                             const sr = JSON.parse(world.getDynamicProperty("CRC:rules")).subRule
@@ -1123,6 +1526,11 @@ world.afterEvents.itemUse.subscribe(data => {
                                             if (parse.run === 18) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
                                             if (parse.run === 21) subs = subrule.filter((tag, i) => tag.startsWith(`{"time`))
                                             if (parse.run === 22) subs = subrule.filter((tag, i) => tag.startsWith(`{"time`))
+                                            if (parse.run === 25) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
+                                            if (parse.run === 26) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
+                                            if (parse.run === 27) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
+                                            if (parse.run === 28) subs = subrule.filter((tag, i) => tag.startsWith(`{"particle`))
+                                            if (parse.run === 29) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
                                             subs.forEach((tag) => {
                                                 sd.push(JSON.parse(tag))
                                             })
@@ -1199,7 +1607,7 @@ world.afterEvents.itemUse.subscribe(data => {
                     if (canceled) return;
                     if (selection === 0) {
                         try {
-                            const entity = world.getDimension(first.dimension.id).getEntities({ location: first.location, maxDistance: 200 }).filter(e => e.typeId === "minecraft:item")
+                            const entity = world.getDimension(sender.dimension.id).getEntities({ location: sender.location, maxDistance: 200 }).filter(e => e.typeId === "minecraft:item")
                             entity.forEach((e) => {
                                 e.kill()
                             })
@@ -1215,6 +1623,9 @@ world.afterEvents.itemUse.subscribe(data => {
                         ui.toggle("アイテムをイベント検知対象に含む(危険！)", world.getDynamicProperty("Item"))
                         ui.toggle("経験値をイベント検知対象に含む(危険！)", world.getDynamicProperty("Xp"))
                         ui.toggle("一定のモブ数を超えたらkillする", world.getDynamicProperty("EntityKill"))
+                        ui.slider("奈落判定の高さ", -70, 0, 1, world.getDynamicProperty("void_detect"))
+                        ui.slider("最高高度判定の高さ", 2, 320, 1, world.getDynamicProperty("sky_detect"))
+                        ui.slider("スポーン座標の高さ", -64, 320, 1, world.getDynamicProperty("spawnY"))
                         ui.toggle("イベントの停止", world.getDynamicProperty("Stop"))
                         ui.show(sender).then(({ formValues, canceled }) => {
                             if (canceled) return;
@@ -1222,7 +1633,10 @@ world.afterEvents.itemUse.subscribe(data => {
                             world.setDynamicProperty("Item", formValues[1])
                             world.setDynamicProperty("Xp", formValues[2])
                             world.setDynamicProperty("EntityKill", formValues[3])
-                            world.setDynamicProperty("Stop", formValues[4])
+                            world.setDynamicProperty("void_detect", formValues[4])
+                            world.setDynamicProperty("sky_detect", formValues[5])
+                            world.setDynamicProperty("spawnY", formValues[6])
+                            world.setDynamicProperty("Stop", formValues[7])
                             sender.sendMessage("§a設定を保存しました")
                         })
                     }
@@ -1249,9 +1663,10 @@ system.runInterval(() => {
         world.getPlayers().forEach(sender => {
             const first = JSON.parse(world.getDynamicProperty("CRC:rules"))
             const entity = sender.dimension.getEntities({ minDistance: PlayerMinDistance, maxDistance: PlayerMaxDistance, location: sender.location })
+            const allentity = sender.dimension.getEntities()
             world.getDimension(sender.dimension.id).getEntities().forEach((e) => {
                 try {
-                    const entities = world.getDimension(e.dimension.id).getEntities({ minDistance: EntityMinDistance, maxDistance: EntityMaxDistance, location: e.location })
+                    const entities = world.getDimension(e.dimension.id).getEntities({ minDistance: EntityMinDistance, maxDistance: EntityMaxDistance, location: e.location, closest: 1 })[0]
                     if (entities !== undefined) {
                         if (world.getDynamicProperty("FallingBlock") === true) {
                             if (entities.typeId !== "minecraft:item" && entities.typeId !== "minecraft:xp_orb") {
@@ -1290,6 +1705,43 @@ system.runInterval(() => {
                             event(e, first, 19)
                         }
                     }
+                }
+            })
+            allentity.forEach(entity => {
+                if (entity.target !== undefined) {
+                    event(entity.target, first, 48)
+                    event(entity, first, 49)
+                }
+                if (entity.getEntitiesFromViewDirection().length) {
+                    const entities = entity.getEntitiesFromViewDirection()
+                    event(entity, first, 40)
+                    entities.forEach(e => {
+                        event(e.entity, first, 41)
+                    })
+                }
+                if (entity.isSneaking) {
+                    event(entity, first, 3)
+                }
+                if (entity.isSprinting) {
+                    event(entity, first, 4)
+                }
+                if (entity.isSleeping) {
+                    event(entity, first, 22)
+                }
+                if (entity.isInWater) {
+                    event(entity, first, 24)
+                }
+                if (entity.isFalling) {
+                    event(entity, first, 25)
+                }
+                if (entity.isSwimming) {
+                    event(entity, first, 26)
+                }
+                if (entity.isOnGround) {
+                    event(entity, first, 27)
+                }
+                if (entity.isClimbing) {
+                    event(entity, first, 35)
                 }
             })
             if (sender.isJumping) {
@@ -1338,6 +1790,22 @@ system.runInterval(() => {
             if (Math.floor(sender.getRotation().x) >= 50) {
                 event(sender, first, 43)
             }
+            if (sender.location.y <= world.getDynamicProperty("void_detect")) {
+                event(sender, first, 46)
+            }
+            if (sender.location.y >= world.getDynamicProperty("sky_detect")) {
+                event(sender, first, 47)
+            }
+            if (sender.target !== undefined) {
+                event(sender.target, first, 48)
+                event(sender, first, 49)
+            }
+            if (sender.dimension.getBlock({ x: sender.location.x, y: sender.location.y + 2, z: sender.location.z }).isAir) {
+                event(sender, first, 50)
+            }
+            else {
+                event(sender, first, 51)
+            }
             if (enableExpansionPack === true) {
                 try {
                     pack.forEach((p, i) => {
@@ -1355,7 +1823,7 @@ system.runInterval(() => {
             }
         })
     }
-}, 1.5)
+}, 1)
 system.runInterval(() => {
     if (world.getDynamicProperty("CRC:rules") !== undefined) {
         for (const sender of world.getPlayers()) {
@@ -1381,16 +1849,23 @@ system.runInterval(() => {
     }
 }, 1200)
 world.beforeEvents.explosion.subscribe(data => {
+    const breaks = data.getImpactedBlocks()
     if (data.source !== undefined) {
         const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
         const sender = data.source
+        breaks.forEach((block) => {
+            event(sender, first, 61, undefined, undefined, block)
+        })
         event(sender, first, 0)
     }
 })
 world.afterEvents.entityHurt.subscribe(data => {
     const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
     const sender = data.hurtEntity
-    event(sender, first, 1)
+    const cause = data.damageSource.cause
+    if (cause !== EntityDamageCause.selfDestruct) {
+        event(sender, first, 1)
+    }
 })
 world.beforeEvents.playerBreakBlock.subscribe(data => {
     const sender = data.player
@@ -1409,8 +1884,14 @@ world.afterEvents.buttonPush.subscribe(data => {
 })
 world.afterEvents.chatSend.subscribe(data => {
     const sender = data.sender
+    const targets = data.targets
     const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
     event(sender, first, 8)
+    if (targets !== undefined) {
+        targets.forEach((player) => {
+            event(player, first, 63)
+        })
+    }
 })
 world.afterEvents.entityDie.subscribe(data => {
     const sender = data.deadEntity
@@ -1422,6 +1903,9 @@ world.afterEvents.playerSpawn.subscribe(data => {
     const sender = data.player
     const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
     event(sender, first, 10)
+    if (data.initialSpawn) {
+        event(sender, first, 52)
+    }
 })
 world.afterEvents.playerInteractWithEntity.subscribe(data => {
     const sender = data.player
@@ -1524,11 +2008,57 @@ world.afterEvents.playerGameModeChange.subscribe(data => {
     const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
     event(sender, first, 45)
 })
+world.afterEvents.playerInputPermissionCategoryChange.subscribe((data) => {
+    const sender = data.player
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    event(sender, first, 53)
+})
+world.afterEvents.entityHealthChanged.subscribe((data) => {
+    const sender = data.entity
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    event(sender, first, 54)
+})
+world.afterEvents.entityLoad.subscribe((data) => {
+    const sender = data.entity
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    event(sender, first, 55)
+})
+world.afterEvents.blockExplode.subscribe((data) => {
+    const sender = data.source
+    const object = data.block
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    if (sender !== undefined) {
+        event(sender, first, 56)
+        event(sender, first, 57, undefined, undefined, object)
+    }
+})
+world.afterEvents.dataDrivenEntityTrigger.subscribe((data) => {
+    try {
+        const sender = data.entity
+        const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+        event(sender, first, 58)
+    } catch (e) { }
+})
+world.afterEvents.playerLeave.subscribe((data) => {
+    const players = world.getAllPlayers()
+    const sender = players[getRandom(0, players.length - 1)]
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    event(sender, first, 59)
+})
+world.beforeEvents.entityRemove.subscribe((data) => {
+    const sender = data.removedEntity
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    event(sender, first, 60)
+})
+world.afterEvents.messageReceive.subscribe((data) => {
+    const sender = data.player
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    event(sender, first, 62)
+})
 /**
-*
 * @param {Player} sender イベントのターゲット
 * @param {Object} first オーナー
-* @param {int} index イベントID 使用済: 0-31
+* @param {int} index イベントID 使用済: 0-66
 * @param {String} variable データ比較用変数
 * @param {any} variableData 固有データ変数
 * @param {Entity | Block} data 検知別オブジェクト
@@ -1551,10 +2081,25 @@ export function event(sender = Player.prototype, first = Object, index, variable
                             }
                             let pars = getRandom(1, 100)
                             try {
-                                if (JSON.stringify(rule[variable]) === JSON.stringify(variableData) || v === false) {
-                                    system.run(() => {
-                                        if (pars <= rule.par) {
-                                            try {
+                                if (rule.filter.enable === true) {
+                                    if (rule.filter.except === true) {
+                                        if (!rule.filter.entites.includes(sender.typeId)) {
+                                            detect_true()
+                                        }
+                                    }
+                                    else {
+                                        if (rule.filter.entites.includes(sender.typeId)) {
+                                            detect_true()
+                                        }
+                                    }
+                                }
+                                else {
+                                    detect_true()
+                                }
+                                function detect_true() {
+                                    if (JSON.stringify(rule[variable]) === JSON.stringify(variableData) || v === false) {
+                                        system.run(() => {
+                                            if (pars <= rule.par) {
                                                 if (rule.run === 0) {
                                                     let se = [];
                                                     first.subRule.forEach((s) => {
@@ -1570,7 +2115,7 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                         sender.dimension.createExplosion({ x: sender.location.x, y: sender.location.y, z: sender.location.z }, getRandom(sub.min, sub.max), { causesFire: sub.fire, allowUnderwater: sub.water })
                                                     }
                                                     else {
-                                                        sender.dimension.createExplosion({ x: data.location.x, y: data.location.y, z: data.location.z }, getRandom(sub.min, sub.max), { causesFire: sub.fire, allowUnderwater: sub.water })
+                                                        data.dimension.createExplosion({ x: data.location.x, y: data.location.y, z: data.location.z }, getRandom(sub.min, sub.max), { causesFire: sub.fire, allowUnderwater: sub.water })
                                                     }
                                                 }
                                                 else if (rule.run === 1) {
@@ -1594,11 +2139,10 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                     const players = world.getPlayers({ gameMode: GameMode.survival }).filter(p => p.name !== sender.name)
                                                     const target = players[getRandom(0, players.length - 1, true)]
                                                     const tagetLocation = target.location
-                                                    world.playSound("mob.endermen.portal", sender.location)
+                                                    world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
                                                     sender.teleport(tagetLocation)
                                                 }
                                                 else if (rule.run === 4) {
-                                                    const { x, y, z } = sender.location
                                                     let se = [];
                                                     first.subRule.forEach((s) => {
                                                         se.push(JSON.stringify(s))
@@ -1610,10 +2154,11 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                     })
                                                     const sub = subs2.find((sub, i) => sub.id === rule.id)
                                                     if (data === undefined) {
+                                                        const { x, y, z } = sender.location
                                                         sender.dimension.setBlockType({ x: x + sub.x, y: y + sub.y, z: z + sub.z }, sub.block)
                                                     }
                                                     else {
-                                                        sender.dimension.setBlockType({ x: data.location.x + sub.x, y: data.location.y + sub.y, z: data.location.z + sub.z }, sub.block)
+                                                        data.dimension.setBlockType({ x: data.location.x + sub.x, y: data.location.y + sub.y, z: data.location.z + sub.z }, sub.block)
                                                     }
                                                 }
                                                 else if (rule.run === 5) {
@@ -1627,10 +2172,15 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                         subs2.push(JSON.parse(tag))
                                                     })
                                                     const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                    sender.applyDamage(sub.damage)
+                                                    const entity = world.getDimension(sender.dimension.id).getEntities({ minDistance: 1, maxDistance: 100, location: sender.location, closest: 1, type: sub.entitytype })[0] ?? undefined
+                                                    if (data === undefined) {
+                                                        sender.applyDamage(sub.damage + sub.damage === 0 ? 0.01 : 0, { cause: sub.causes, damagingEntity: entity })
+                                                    }
+                                                    else {
+                                                        sender.applyDamage(sub.damage + sub.damage === 0 ? 0.01 : 0, { cause: sub.causes, damagingEntity: entity, damagingProjectile: data })
+                                                    }
                                                 }
                                                 else if (rule.run === 6) {
-                                                    const { x, y, z } = sender.location
                                                     let se = [];
                                                     first.subRule.forEach((s) => {
                                                         se.push(JSON.stringify(s))
@@ -1642,10 +2192,11 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                     })
                                                     const sub = subs2.find((sub, i) => sub.id === rule.id)
                                                     if (data === undefined) {
+                                                        const { x, y, z } = sender.location
                                                         sender.dimension.spawnEntity(sub.spawn, { x: x, y: y, z: z })
                                                     }
                                                     else {
-                                                        sender.dimension.spawnEntity(sub.spawn, { x: data.location.x, y: data.location.y, z: data.location.z })
+                                                        data.dimension.spawnEntity(sub.spawn, { x: data.location.x, y: data.location.y, z: data.location.z })
                                                     }
                                                 }
                                                 else if (rule.run === 7) {
@@ -1663,7 +2214,7 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                             subs2.push(JSON.parse(tag))
                                                         })
                                                         const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        world.playSound("firework.launch", sender.location, { volume: 1, pitch: 0.5 })
+                                                        world.getDimension(sender.dimension.id).playSound("firework.launch", sender.location, { volume: 1, pitch: 0.5 })
                                                         let s = system.runInterval(() => {
                                                             const molang = new MolangVariableMap()
                                                             molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
@@ -1710,20 +2261,56 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                         subs2.push(JSON.parse(tag))
                                                     })
                                                     const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                    sender.addEffect(sub.effectId, sub.time, { amplifier: sub.level })
+                                                    sender.addEffect(sub.effectId, sub.time * 20, { amplifier: sub.level })
                                                 }
                                                 else if (rule.run === 11) {
                                                     const { x, y, z } = sender.location
-                                                    sender.dimension.spawnParticle(`minecraft:dragon_dying_explosion`, { x: x, y: y, z: z })
-                                                    world.playSound("random.pop", { x: x, y: y, z: z }, { volume: 1, pitch: 0.5 })
-                                                    sender.teleport({ x: x, y: y + 100, z: z })
-                                                    system.runTimeout(() => {
-                                                        try {
-                                                            sender.kill()
-                                                        } catch (e) {
+                                                    if (sender.typeId === "minecraft:player") {
+                                                        if (sender.getDynamicProperty("indying") === false || !sender.getDynamicProperty("indying")) {
+                                                            sender.setDynamicProperty("indying", true)
+                                                            sender.inputPermissions.movementEnabled = false
+                                                            sender.camera.fade({ fadeColor: { red: 1, green: 1, blue: 1 }, fadeTime: { fadeInTime: 3, holdTime: 1, fadeOutTime: 1.5 } })
+                                                            sender.camera.setCamera("minecraft:free", { easeOptions: { easeType: EasingType.InQuart, easeTime: 3 }, facingLocation: { x: x, y: y + 100, z: z }, location: { x: x + 150, y: y + 160, z: z + 150 } })
+                                                            sender.onScreenDisplay.hideAllExcept()
+                                                            system.runTimeout(() => {
+                                                                try {
+                                                                    sender.dimension.spawnParticle(`minecraft:dragon_dying_explosion`, sender.location)
+                                                                    world.getDimension(sender.dimension.id).playSound("random.pop", sender.location, { volume: 1, pitch: 0.5 })
+                                                                    sender.teleport({ x: x, y: y + 100, z: z })
+                                                                } catch (e) { }
+                                                            }, 55)
+                                                            system.runTimeout(() => {
+                                                                try {
+                                                                    sender.addEffect("invisibility", 100, { amplifier: 255, showParticles: false })
+                                                                    sender.kill()
+                                                                    system.runTimeout(() => {
+                                                                        try {
+                                                                            sender.onScreenDisplay.resetHudElements()
+                                                                            sender.camera.clear()
+                                                                            sender.inputPermissions.movementEnabled = true
+                                                                            sender.setDynamicProperty("indying", false)
+                                                                        } catch (e) {
+                                                                        }
+                                                                    }, 10)
+                                                                } catch (e) {
 
+                                                                }
+                                                            }, 65)
                                                         }
-                                                    }, 10)
+                                                    }
+                                                    else {
+                                                        sender.dimension.spawnParticle(`minecraft:dragon_dying_explosion`, { x: x + 0.5, y: y + 0.5, z: z + 0.5 })
+                                                        world.getDimension(sender.dimension.id).playSound("random.pop", { x: x + 0.5, y: y, z: z + 0.5 }, { volume: 1, pitch: 0.5 })
+                                                        sender.teleport({ x: x, y: y + 100, z: z })
+                                                        sender.addEffect("invisibility", 100, { amplifier: 255, showParticles: false })
+                                                        system.runTimeout(() => {
+                                                            try {
+                                                                sender.kill()
+                                                            } catch (e) {
+
+                                                            }
+                                                        }, 10)
+                                                    }
                                                 }
                                                 else if (rule.run === 12) {
                                                     try {
@@ -1756,7 +2343,7 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                                             molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
                                                                             inseki.dimension.spawnParticle("minecraft:knockback_roar_particle", { x: inseki.location.x, y: inseki.location.y, z: inseki.location.z }, molang)
                                                                             inseki.dimension.spawnParticle("crc:inseki", { x: inseki.location.x, y: inseki.location.y, z: inseki.location.z })
-                                                                            world.playSound("random.explode", inseki.location, { pitch: 0.5, volume: 100 })
+                                                                            world.getDimension(sender.dimension.id).playSound("random.explode", inseki.location, { pitch: 0.5, volume: 100 })
                                                                         }
                                                                         else {
                                                                             system.clearRun(i)
@@ -1801,7 +2388,7 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                                 })
                                                                 const sub = subs2.find((sub, i) => sub.id === rule.id)
                                                                 sender.applyImpulse({ x: 0, y: getRandom(1, 2.5), z: 0 })
-                                                                world.playSound("firework.launch", sender.location, { volume: 1, pitch: 0.5 })
+                                                                world.getDimension(sender.dimension.id).playSound("firework.launch", sender.location, { volume: 1, pitch: 0.5 })
                                                                 let a = system.runTimeout(() => {
                                                                     let s = system.runInterval(() => {
                                                                         if (sender !== undefined) {
@@ -1855,7 +2442,6 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                     if (!entities.typeId === "minecraft:player") entities.remove()
                                                 }
                                                 else if (rule.run === 15) {
-                                                    const { x, y, z } = sender.location
                                                     let se = [];
                                                     first.subRule.forEach((s) => {
                                                         se.push(JSON.stringify(s))
@@ -1867,10 +2453,11 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                     })
                                                     const sub = subs2.find((sub, i) => sub.id === rule.id)
                                                     if (data === undefined) {
+                                                        const { x, y, z } = sender.location
                                                         sender.dimension.setBlockType({ x: x + sub.x, y: y + sub.y, z: z + sub.z }, `${random3[getRandom(0, random3.length - 1)]}`)
                                                     }
                                                     else {
-                                                        sender.dimension.setBlockType({ x: data.location.x + sub.x, y: data.location.y + sub.y, z: data.location.z + sub.z }, `${random3[getRandom(0, random3.length - 1)]}`)
+                                                        data.dimension.setBlockType({ x: data.location.x + sub.x, y: data.location.y + sub.y, z: data.location.z + sub.z }, `${random3[getRandom(0, random3.length - 1)]}`)
                                                     }
                                                 }
                                                 else if (rule.run === 16) {
@@ -1886,21 +2473,55 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                     })
                                                     const sub = subs2.find((sub, i) => sub.id === rule.id)
                                                     // if (data === undefined) {
-                                                    sender.dimension.spawnParticle(`minecraft:huge_explosion_emitter`, { x: x, y: y, z: z })
-                                                    world.playSound("random.explode", { x: x, y: y, z: z }, { volume: 1, pitch: 0.5 })
-                                                    sender.teleport({ x: x, y: -64, z: z })
-                                                    system.runTimeout(() => {
-                                                        try {
-                                                            sender.kill()
-                                                        } catch (e) {
-
+                                                    if (sender.typeId === "minecraft:player") {
+                                                        if (sender.getDynamicProperty("indying2") === false || !sender.getDynamicProperty("indying2")) {
+                                                            sender.setDynamicProperty("indying2", true)
+                                                            sender.camera.fade({ fadeColor: { red: 0, green: 0, blue: 0 }, fadeTime: { fadeInTime: 3, holdTime: 1, fadeOutTime: 1.5 } })
+                                                            sender.camera.setCamera("minecraft:free", { easeOptions: { easeType: EasingType.InQuart, easeTime: 3 }, location: { x: x, y: y, z: z } })
+                                                            sender.onScreenDisplay.hideAllExcept()
+                                                            system.runTimeout(() => {
+                                                                try {
+                                                                    sender.dimension.spawnParticle(`minecraft:huge_explosion_emitter`, sender.location)
+                                                                    world.getDimension(sender.dimension.id).playSound("random.explode", sender.location, { volume: 1, pitch: 0.5 })
+                                                                    let asa = sender.location
+                                                                    sender.teleport({ x: x, y: -64, z: z })
+                                                                    system.runTimeout(() => {
+                                                                        try {
+                                                                            sender.dimension.spawnEntity(sub.spawn, asa)
+                                                                            sender.kill()
+                                                                            system.runTimeout(() => {
+                                                                                try {
+                                                                                    sender.onScreenDisplay.resetHudElements()
+                                                                                    sender.camera.clear()
+                                                                                    sender.setDynamicProperty("indying2", false)
+                                                                                } catch (e) {
+                                                                                }
+                                                                            }, 10)
+                                                                        } catch (e) {
+                                                                        }
+                                                                    }, 2)
+                                                                } catch (e) {
+                                                                }
+                                                            }, 60)
                                                         }
-                                                    }, 10)
-                                                    sender.dimension.spawnEntity(sub.spawn, { x: x, y: y, z: z })
+                                                    }
+                                                    else {
+                                                        sender.dimension.spawnParticle(`minecraft:huge_explosion_emitter`, { x: x, y: y, z: z })
+                                                        world.getDimension(sender.dimension.id).playSound("random.explode", { x: x, y: y, z: z }, { volume: 1, pitch: 0.5 })
+                                                        sender.teleport({ x: x, y: -64, z: z })
+                                                        system.runTimeout(() => {
+                                                            try {
+                                                                sender.kill()
+                                                            } catch (e) {
+
+                                                            }
+                                                        }, 10)
+                                                        sender.dimension.spawnEntity(sub.spawn, { x: x, y: y, z: z })
+                                                    }
                                                     // }
                                                     // else {
                                                     //     sender.dimension.spawnParticle(`minecraft:huge_explosion_emitter`, { x: data.location.x, y: data.location.y, z: data.location.z })
-                                                    //     world.playSound("random.explode", { x: data.location.x, y: data.location.y, z: data.location.z }, { volume: 1, pitch: 0.5 })
+                                                    //     world.getDimension(sender.dimension.id).playSound("random.explode", { x: data.location.x, y: data.location.y, z: data.location.z }, { volume: 1, pitch: 0.5 })
                                                     //     sender.dimension.spawnEntity(sub.spawn, { x: data.location.x + 0.5, y: data.location.y + 0.2, z: data.location.z + 0.5 })
                                                     // }
                                                 }
@@ -1915,14 +2536,9 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                         subs2.push(JSON.parse(tag))
                                                     })
                                                     const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                    try {
-                                                        sender.runCommandAsync(`${sub.command}`)
-                                                    } catch (e) {
-
-                                                    }
+                                                    sender.runCommandAsync(`${sub.command}`).catch((r) => { })
                                                 }
                                                 else if (rule.run === 18) {
-                                                    const { x, y, z } = sender.location
                                                     let se = [];
                                                     first.subRule.forEach((s) => {
                                                         se.push(JSON.stringify(s))
@@ -1933,7 +2549,14 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                         subs2.push(JSON.parse(tag))
                                                     })
                                                     const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                    sender.dimension.spawnItem(new ItemStack(`${random4[getRandom(0, random4.length - 1)]}`, getRandom(1, 64, true)), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                    if (data !== undefined) {
+                                                        const { x, y, z } = data.location
+                                                        data.dimension.spawnItem(new ItemStack(`${random4[getRandom(0, random4.length - 1)]}`, getRandom(1, 64, true)), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                    }
+                                                    else {
+                                                        const { x, y, z } = sender.location
+                                                        sender.dimension.spawnItem(new ItemStack(`${random4[getRandom(0, random4.length - 1)]}`, getRandom(1, 64, true)), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                    }
                                                 }
                                                 else if (rule.run === 19) {
                                                     sender.setRotation({ x: getRandom(-180, 90, false), y: getRandom(-180, 180, false) })
@@ -1943,10 +2566,10 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                     const target = players[getRandom(0, players.length - 1, true)]
                                                     const location = sender.location
                                                     const tagetLocation = target.location
-                                                    world.playSound("mob.endermen.portal", sender.location)
-                                                    sender.teleport(tagetLocation)
-                                                    world.playSound("mob.endermen.portal", target.location)
-                                                    target.teleport(location)
+                                                    world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
+                                                    sender.teleport(tagetLocation, { dimension: target.dimension, rotation: target.getRotation(), facingLocation: target.getViewDirection() })
+                                                    world.getDimension(target.dimension.id).playSound("mob.endermen.portal", target.location)
+                                                    target.teleport(location, { dimension: sender.dimension, rotation: sender.getRotation(), facingLocation: sender.getViewDirection() })
                                                 }
                                                 else if (rule.run === 21) {
                                                     let se = [];
@@ -1986,19 +2609,180 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                         world.setTimeOfDay(day)
                                                     }
                                                 }
+                                                else if (rule.run === 23) {
+                                                    const spawn = world.getDefaultSpawnLocation()
+                                                    sender.teleport({ x: spawn.x + 0.5, y: world.getDynamicProperty("spawnY"), z: spawn.z + 0.5 })
+                                                }
+                                                else if (rule.run === 24) {
+                                                    sender.addEffect(random2[getRandom(0, random2.length - 1)], getRandom(1, 300) * 20, { amplifier: getRandom(1, 255) })
+                                                }
+                                                else if (rule.run === 25) {
+                                                    const { x, y, z } = sender.location
+                                                    let se = [];
+                                                    first.subRule.forEach((s) => {
+                                                        se.push(JSON.stringify(s))
+                                                    })
+                                                    const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                    let subs2 = []
+                                                    subs.forEach((tag, i) => {
+                                                        subs2.push(JSON.parse(tag))
+                                                    })
+                                                    const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                    if (sender.typeId === "minecraft:player") {
+                                                        world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
+                                                        sender.teleport({ x: sub.x + 0.5, y: sub.y, z: sub.z + 0.5 }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), checkForBlocks: sub.check })
+                                                    }
+                                                    else {
+                                                        world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
+                                                        sender.teleport({ x: sub.x + 0.5, y: sub.y, z: sub.z + 0.5 }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), keepVelocity: sub.keep, checkForBlocks: sub.check })
+                                                    }
+                                                }
+                                                else if (rule.run === 26) {
+                                                    let se = [];
+                                                    first.subRule.forEach((s) => {
+                                                        se.push(JSON.stringify(s))
+                                                    })
+                                                    const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                    let subs2 = []
+                                                    subs.forEach((tag, i) => {
+                                                        subs2.push(JSON.parse(tag))
+                                                    })
+                                                    const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                    if (data !== undefined) {
+                                                        const { x, y, z } = data.location
+                                                        data.dimension.spawnItem(new ItemStack(`${sub.item}`, sub.amount), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                    }
+                                                    else {
+                                                        const { x, y, z } = sender.location
+                                                        sender.dimension.spawnItem(new ItemStack(`${sub.item}`, sub.amount), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                    }
+                                                }
+                                                else if (rule.run === 27) {
+                                                    const { x, y, z } = sender.location
+                                                    let se = [];
+                                                    first.subRule.forEach((s) => {
+                                                        se.push(JSON.stringify(s))
+                                                    })
+                                                    const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                    let subs2 = []
+                                                    subs.forEach((tag, i) => {
+                                                        subs2.push(JSON.parse(tag))
+                                                    })
+                                                    const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                    if (sender.typeId === "minecraft:player") {
+                                                        world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
+                                                        sender.teleport({ x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), checkForBlocks: sub.check })
+                                                    }
+                                                    else {
+                                                        world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
+                                                        sender.teleport({ x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), keepVelocity: sub.keep, checkForBlocks: sub.check })
+                                                    }
+                                                }
+                                                else if (rule.run === 28) {
+                                                    const { x, y, z } = sender.location
+                                                    let se = [];
+                                                    first.subRule.forEach((s) => {
+                                                        se.push(JSON.stringify(s))
+                                                    })
+                                                    const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                    let subs2 = []
+                                                    subs.forEach((tag, i) => {
+                                                        subs2.push(JSON.parse(tag))
+                                                    })
+                                                    const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                    if (data !== undefined) {
+                                                        if (data.typeId !== "minecraft:player" && typeof data === Entity) {
+                                                            data.applyImpulse({ x: sub.x, y: sub.y, z: sub.z })
+                                                        }
+                                                    }
+                                                    else {
+                                                        if (sender.typeId !== "minecraft:player") {
+                                                            sender.applyImpulse({ x: sub.x, y: sub.y, z: sub.z })
+                                                        }
+                                                    }
+                                                }
+                                                else if (rule.run === 29) {
+                                                    let se = [];
+                                                    first.subRule.forEach((s) => {
+                                                        se.push(JSON.stringify(s))
+                                                    })
+                                                    const subs = se.filter((tag, i) => tag.startsWith(`{"particle":`))
+                                                    let subs2 = []
+                                                    subs.forEach((tag, i) => {
+                                                        subs2.push(JSON.parse(tag))
+                                                    })
+                                                    const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                    const direction = sender.getViewDirection()
+                                                    const loc = {
+                                                        x: sender.location.x + sub.x + direction.x,
+                                                        y: sender.location.y + sub.y + direction.y,
+                                                        z: sender.location.z + sub.z + direction.z
+                                                    }
+                                                    const molang = new MolangVariableMap()
+                                                    molang.setColorRGBA('variable.color', {
+                                                        red: Math.random(),
+                                                        green: Math.random(),
+                                                        blue: Math.random(),
+                                                        alpha: Math.random()
+                                                    });
+                                                    if (sub.visible === false) {
+                                                        sender.spawnParticle(sub.particle, loc, molang)
+                                                    }
+                                                    else {
+                                                        sender.dimension.spawnParticle(sub.particle, loc, molang)
+                                                    }
+                                                }
+                                                else if (rule.run === 30) {
+                                                    let se = [];
+                                                    first.subRule.forEach((s) => {
+                                                        se.push(JSON.stringify(s))
+                                                    })
+                                                    const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                    let subs2 = []
+                                                    subs.forEach((tag, i) => {
+                                                        subs2.push(JSON.parse(tag))
+                                                    })
+                                                    const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                    const direction = sender.getViewDirection()
+                                                    const loc = {
+                                                        x: sender.location.x + sub.x + direction.x,
+                                                        y: sender.location.y + sub.y + direction.y,
+                                                        z: sender.location.z + sub.z + direction.z
+                                                    }
+                                                    const molang = new MolangVariableMap()
+                                                    molang.setColorRGBA('variable.color', {
+                                                        red: Math.random(),
+                                                        green: Math.random(),
+                                                        blue: Math.random(),
+                                                        alpha: Math.random()
+                                                    });
+                                                    if (sub.visible === false) {
+                                                        sender.spawnParticle(particles[getRandom(0, particles.length - 1)], loc, molang)
+                                                    }
+                                                    else {
+                                                        sender.dimension.spawnParticle(particles[getRandom(0, particles.length - 1)], loc, molang)
+                                                    }
+                                                }
+                                                else if (rule.run === 31) {
+                                                    if (data === undefined) {
+                                                        const { x, y, z } = sender.location
+                                                        sender.dimension.spawnEntity(random[getRandom(0, random.length - 1)], { x: x, y: y, z: z })
+                                                    }
+                                                    else {
+                                                        data.dimension.spawnEntity(random[getRandom(0, random.length - 1)], { x: data.location.x, y: data.location.y, z: data.location.z })
+                                                    }
+                                                }
                                                 else {
 
                                                 }
-                                            } catch (e) {
-
                                             }
-                                        }
-                                        else {
-                                        }
-                                    })
-                                }
-                                else {
+                                            else {
+                                            }
+                                        })
+                                    }
+                                    else {
 
+                                    }
                                 }
                             } catch (e) {
 
@@ -2007,13 +2791,15 @@ export function event(sender = Player.prototype, first = Object, index, variable
                     }
                 }
                 else {
-                    const entity = world.getDimension(sender.dimension.id).getEntities({ location: sender.location, maxDistance: 100 }).filter(e => e.typeId !== "minecraft:player")
+                    const entity = world.getDimension(sender.dimension.id).getEntities({ location: sender.location, minDistance: 1, maxDistance: 200 }).filter(e => e.typeId !== "minecraft:player")
                     system.run(() => {
-                        entity[getRandom(0, entity.length - 1, true)].kill();
+                        try {
+                            entity[getRandom(0, entity.length - 1, true)].remove();
+                        } catch (e) { }
                     })
                 }
             }
-            catch (e) {}
+            catch (e) { }
         }
     }
 }
@@ -2167,12 +2953,16 @@ export function ruleData(sender, runData, rule) {
     }
     else if (runData === "ダメージを与える") {
         let ui = new ModalFormData()
-        ui.title("炎上設定")
-        ui.slider("ダメージ量", 1, 40, 1)
+        ui.title("ダメージ量設定")
+        ui.slider("ダメージ量", 0, 40, 1)
+        ui.dropdown("ケース", cause, 24)
+        ui.dropdown("タイプ", random)
         ui.show(sender).then(({ formValues, canceled }) => {
             if (canceled) return;
             let rule2 = {
                 damage: formValues[0],
+                causes: cause[formValues[1]],
+                entitytype: random[formValues[2]],
                 id: rule.id
             }
             set(sender, rule, rule2)
@@ -2421,6 +3211,170 @@ export function ruleData(sender, runData, rule) {
                 id: rule.id
             }
             set(sender, rule, rule2)
+        })
+    }
+    else if (runData === "テレポートする") {
+        let ui = new ModalFormData()
+        ui.title("テレポートの設定")
+        ui.textField("座標\n§cX", "数値", "0")
+        ui.textField("§aY", "数値", "0")
+        ui.textField("§9Z", "数値", "0")
+        ui.dropdown("ディメンション", DimensionTypes.getAll().map(d => d.typeId), 1)
+        ui.toggle("速度の保持", false)
+        ui.toggle("テレポート先にブロックがあるか確認", false)
+        ui.show(sender).then(({ formValues, canceled }) => {
+            if (canceled) return;
+            if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
+                let rule2 = {
+                    x: Number(formValues[0]),
+                    y: Number(formValues[1]),
+                    z: Number(formValues[2]),
+                    dimensiontype: DimensionTypes.getAll().map(d => d.typeId)[formValues[3]],
+                    keep: formValues[4],
+                    check: formValues[5],
+                    id: rule.id
+                }
+                set(sender, rule, rule2)
+            }
+            else {
+                sender.sendMessage("§c数字で入力してください！")
+            }
+        })
+    }
+    else if (runData === "アイテムをスポーンさせる") {
+        let ui = new ModalFormData()
+        ui.title("アイテムのスポーン設定")
+        ui.textField("オフセット(範囲)\n§cX", "数値", "0")
+        ui.textField("§aY", "数値", "80")
+        ui.textField("§9Z", "数値", "0")
+        ui.textField("アイテム名", "minecraft:diamond")
+        ui.slider("個数", 1, 64, 1)
+        ui.show(sender).then(({ formValues, canceled }) => {
+            if (canceled) return;
+            if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
+                if (formValues[4] !== undefined) {
+                    let rule2 = {
+                        x: Number(formValues[0]),
+                        y: Number(formValues[1]),
+                        z: Number(formValues[2]),
+                        item: formValues[3],
+                        amount: formValues[4],
+                        id: rule.id
+                    }
+                    set(sender, rule, rule2)
+                }
+                else {
+                    sender.sendMessage("§cアイテム名を入力してください！")
+                }
+            }
+            else {
+                sender.sendMessage("§c数字で入力してください！")
+            }
+        })
+    }
+    else if (runData === "ランダムな範囲でテレポートする") {
+        let ui = new ModalFormData()
+        ui.title("テレポートの設定")
+        ui.textField("座標(範囲)\n§cX", "数値", "20")
+        ui.textField("§aY", "数値", "0")
+        ui.textField("§9Z", "数値", "20")
+        ui.dropdown("ディメンション", DimensionTypes.getAll().map(d => d.typeId), 1)
+        ui.toggle("速度の保持", false)
+        ui.toggle("テレポート先にブロックがあるか確認", false)
+        ui.show(sender).then(({ formValues, canceled }) => {
+            if (canceled) return;
+            if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
+                let rule2 = {
+                    x: Number(formValues[0]),
+                    y: Number(formValues[1]),
+                    z: Number(formValues[2]),
+                    dimensiontype: DimensionTypes.getAll().map(d => d.typeId)[formValues[3]],
+                    keep: formValues[4],
+                    check: formValues[5],
+                    id: rule.id
+                }
+                set(sender, rule, rule2)
+            }
+            else {
+                sender.sendMessage("§c数字で入力してください！")
+            }
+        })
+    }
+    else if (runData === "速度を加える(プレイヤー以外)") {
+        let ui = new ModalFormData()
+        ui.title("速度の設定")
+        ui.textField("§cx座標(数字記入)", "Num")
+        ui.textField("§ey座標(数字記入)", "Num")
+        ui.textField("§9z座標(数字記入)", "Num")
+        ui.show(sender).then(({ formValues, canceled }) => {
+            if (canceled) return;
+            if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
+                let rule2 = {
+                    x: Number(formValues[0]),
+                    y: Number(formValues[1]),
+                    z: Number(formValues[2]),
+                    id: rule.id
+                }
+                set(sender, rule, rule2)
+            }
+            else {
+                sender.sendMessage("§c数字で入力してください！")
+            }
+        })
+    }
+    else if (runData === "パーティクルを表示する") {
+        let ui = new ModalFormData()
+        ui.title("パーティクルの設定")
+        ui.textField("パーティクル名", "minecraft:")
+        ui.textField("表示する相対座標\n§cX", "数値", "0")
+        ui.textField("§aY", "数値", "0")
+        ui.textField("§9Z", "数値", "0")
+        ui.toggle("全員に表示する", true)
+        ui.show(sender).then(({ formValues, canceled }) => {
+            if (canceled) return;
+            if (formValues[0] !== undefined) {
+                if (!isNaN(formValues[1]) && !isNaN(formValues[2]) && !isNaN(formValues[3])) {
+                    let rule2 = {
+                        particle: formValues[0],
+                        x: Number(formValues[1]),
+                        y: Number(formValues[2]),
+                        z: Number(formValues[3]),
+                        visible: formValues[4],
+                        id: rule.id
+                    }
+                    set(sender, rule, rule2)
+                }
+                else {
+                    sender.sendMessage("§c数字で入力してください！")
+                }
+            }
+            else {
+                sender.sendMessage("§c文字を入力してください！")
+            }
+        })
+    }
+    else if (runData === "ランダムなパーティクルを表示する") {
+        let ui = new ModalFormData()
+        ui.title("ランダムなパーティクルの設定")
+        ui.textField("表示する相対座標\n§cX", "数値", "0")
+        ui.textField("§aY", "数値", "0")
+        ui.textField("§9Z", "数値", "0")
+        ui.toggle("全員に表示する", true)
+        ui.show(sender).then(({ formValues, canceled }) => {
+            if (canceled) return;
+            if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
+                let rule2 = {
+                    x: Number(formValues[0]),
+                    y: Number(formValues[1]),
+                    z: Number(formValues[2]),
+                    visible: formValues[3],
+                    id: rule.id
+                }
+                set(sender, rule, rule2)
+            }
+            else {
+                sender.sendMessage("§c数字で入力してください！")
+            }
         })
     }
     else {

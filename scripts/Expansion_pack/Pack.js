@@ -21,6 +21,7 @@ import { ActionFormData, MessageFormData, ModalFormData } from "@minecraft/serve
 By DaySpからぁげぇい
 youtubeリンク:https://www.youtube.com/channel/UCK4Nbt4uT9L57PgM_euvnZQ
 githubリンク:https://github.com/DaySpoon/Custom-Rule-Creator
+wiki:https://github.com/DaySpoon/Custom-Rule-Creator/wiki/%E6%8B%A1%E5%BC%B5%E6%A9%9F%E8%83%BD
 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 ここに追加したいコードを書くか、コピペで持ってくることができます
 */

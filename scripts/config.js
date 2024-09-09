@@ -10,6 +10,15 @@ const PlayerMinDistance = 0.5 //浮動小数点
 const EntityMaxDistance = 2 //浮動小数点
 const EntityMinDistance = 0.5 //浮動小数点
 
+//その他設定
+const enableAddonStatus = true // 真偽値
 
-
-export { enableExpansionPack, mobLimit, PlayerMaxDistance, EntityMaxDistance, PlayerMinDistance, EntityMinDistance }
+export {
+    enableExpansionPack,
+    mobLimit,
+    PlayerMaxDistance,
+    EntityMaxDistance,
+    PlayerMinDistance,
+    EntityMinDistance,
+    enableAddonStatus
+}
