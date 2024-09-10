@@ -2,6 +2,7 @@
 # Custom Rule Creator Addon β1.5!! 🔨
 ### β1.5
 更なる発動条件や実行、フィルター機能などが追加されました！
+* [詳しいアップデート内容](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
 
 **2000通り以上の組み合わせ。**
 
