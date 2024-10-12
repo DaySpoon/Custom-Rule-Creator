@@ -1,10 +1,10 @@
-![addon](https://media.discordapp.net/attachments/1115220489141497908/1282670652360228914/httpsdiscord.cominviteWuVMQbYaxt.png?ex=66e033a2&is=66dee222&hm=c57e3d7c35b4376743c8eab6f3e57de7eb129241027c44f8daaa1962f1e2be30&=&format=webp&quality=lossless&width=1000&height=550)
-# Custom Rule Creator Addon β1.5!! 🔨
-### β1.5
+![addon](https://media.discordapp.net/attachments/1115220489141497908/1294650654664687646/httpsdiscord.cominviteWuVMQbYaxt.png?ex=670bc8e1&is=670a7761&hm=b3bf0cdf431eb15ee1825e935e41dc23cbd0935389e9782d7cdff9d967c5deeb&=&format=webp&quality=lossless&width=1000&height=550)
+# Custom Rule Creator Addon pre-1.0!! 🔨
+### pre-1.0
 更なる発動条件や実行、フィルター機能などが追加されました！
 * [詳しいアップデート内容](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
 
-**2000通り以上の組み合わせ。**
+**150000通り以上の組み合わせ。**
 
 このアドオンは自分達でルールを決めることができます。権限がある状態で棒を右クリックするとメニューを開くことができ、そこでルールを決めることができます。
 
