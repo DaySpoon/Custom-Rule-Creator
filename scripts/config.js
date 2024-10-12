@@ -5,13 +5,15 @@ const enableExpansionPack = false; // 真偽値
 
 // アドオン基本設定
 const mobLimit = 120; // 整数値
-const PlayerMaxDistance = 2.25 //浮動小数点
-const PlayerMinDistance = 0.5 //浮動小数点
-const EntityMaxDistance = 2 //浮動小数点
-const EntityMinDistance = 0.5 //浮動小数点
+const PlayerMaxDistance = 2.25; //浮動小数点
+const PlayerMinDistance = 0.5; //浮動小数点
+const EntityMaxDistance = 2; //浮動小数点
+const EntityMinDistance = 0.5; //浮動小数点
 
 //その他設定
-const enableAddonStatus = true // 真偽値
+const EmergencySystemControl = true //真偽値 
+const enableAddonStatus = true; // 真偽値
+const maxDetectedTriggerTime = 300; //整数値(60以上の値に設定してください)
 
 export {
     enableExpansionPack,
@@ -20,5 +22,7 @@ export {
     EntityMaxDistance,
     PlayerMinDistance,
     EntityMinDistance,
-    enableAddonStatus
+    enableAddonStatus,
+    maxDetectedTriggerTime,
+    EmergencySystemControl
 }

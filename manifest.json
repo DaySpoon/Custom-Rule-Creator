@@ -1,14 +1,14 @@
 {
   "format_version": 2,
   "header": {
-    "name": "§l§eルールクリエーター[B] β1.5",
-    "description": "好きなルールを決めて楽しもう。\n本アドオンはベータ版です。ベータAPIをONにしてください。動画で取り扱う際の許可はいりません。\n禁止事項: アドオンの二次配布・自作発言・改造したアドオンの配布",
+    "name": "§l§cルールクリエーター[B] pre-1.0",
+    "description": "好きなルールを決めて楽しもう。\n本アドオンはpre-1.0版です。安定バージョンではないです。ベータ版が使われているので、ベータAPIをONにしてください。動画で取り扱う際の許可はいりません。\n禁止事項: アドオンの二次配布・自作発言・改造したアドオンの配布",
     "version": [
       1,
       0,
       0
     ],
-    "uuid": "2fad137c-a914-4902-b9fd-da0027011a62",
+    "uuid": "dd1dfd7b-543c-4cc7-980e-02e47f88d215",
     "min_engine_version": [
       1,
       19,
@@ -25,13 +25,13 @@
         3,
         1
       ],
-      "uuid": "4a6f1784-e09b-4f22-b1ab-17ce78441faf",
+      "uuid": "2976f6b3-252c-497f-a3b6-ac17594a652e",
       "entry": "scripts/Mains.js"
     },
     {
       "version": [3, 3, 1],
       "type": "data",
-      "uuid": "b7d9b87f-882c-41ab-8603-ab7f688d796c",
+      "uuid": "c2d692d8-5e57-4099-9a9f-7e9db1f59923",
       "description": "data module"
     }
   ],

@@ -1,6 +1,7 @@
 import { Player, system, world } from "@minecraft/server"
-import { event, random2, ruleData } from "../Mains"
+import { event, loadOldSaveData, loadSaveData, random2, ruleData } from "../Mains"
 import { ActionFormData, MessageFormData, ModalFormData } from "@minecraft/server-ui"
+
 /*
 標準プロパティ
    ruleDisplay: Object; //UIに表示したときのテキスト
@@ -148,6 +149,7 @@ const pack = [
 * 指定したルールデータを取得します
 * @param {Number} CallID 呼びだされたルールデータID 
 * @param {Boolean} getRawData JSON形式のデータ 
+* @returns 取得したルールデータの配列を返します。
 */
 function getRuleDatas(CallID, getRawData = false) {
     if (world.getDynamicProperty("CRC:rules")) {
