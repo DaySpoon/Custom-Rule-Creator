@@ -1,7 +1,7 @@
 ![addon](https://media.discordapp.net/attachments/1115220489141497908/1294650654664687646/httpsdiscord.cominviteWuVMQbYaxt.png?ex=670bc8e1&is=670a7761&hm=b3bf0cdf431eb15ee1825e935e41dc23cbd0935389e9782d7cdff9d967c5deeb&=&format=webp&quality=lossless&width=1000&height=550)
 # Custom Rule Creator Addon pre-1.0!! 🔨
 ### pre-1.0
-更なる発動条件や実行、フィルター機能などが追加されました！
+更なる発動条件や実行、複数条件や時間差実行機能などが追加されました！
 * [詳しいアップデート内容](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
 
 **150000通り以上の組み合わせ。**
