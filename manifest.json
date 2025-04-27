@@ -1,14 +1,14 @@
 {
   "format_version": 2,
   "header": {
-    "name": "§l§cルールクリエーター[B] pre-1.0",
-    "description": "好きなルールを決めて楽しもう。\n本アドオンはpre-1.0版です。安定バージョンではないです。ベータ版が使われているので、ベータAPIをONにしてください。動画で取り扱う際の許可はいりません。\n禁止事項: アドオンの二次配布・自作発言・改造したアドオンの配布",
+    "name": "§l§cルールクリエーター[B] 1.0",
+    "description": "好きなルールを決めて楽しもう。\n使用ライブラリ: MinePack lib\n本アドオンは1.0版です。安定バージョンではないです。ベータ版が使われているので、ベータAPIをONにしてください。動画で取り扱う際の許可はいりません。\n禁止事項: アドオンの二次配布・自作発言・改造したアドオンの配布",
     "version": [
       1,
       0,
       0
     ],
-    "uuid": "dd1dfd7b-543c-4cc7-980e-02e47f88d215",
+    "uuid": "797c5a21-05b7-4d8e-accd-c537f866a2c3",
     "min_engine_version": [
       1,
       19,
@@ -25,28 +25,28 @@
         3,
         1
       ],
-      "uuid": "2976f6b3-252c-497f-a3b6-ac17594a652e",
+      "uuid": "6c0af912-f991-484c-871d-22976c01ca60",
       "entry": "scripts/Mains.js"
     },
     {
       "version": [3, 3, 1],
       "type": "data",
-      "uuid": "c2d692d8-5e57-4099-9a9f-7e9db1f59923",
+      "uuid": "ffd5cd36-05d9-4761-9276-6fc8e0f9ae3d",
       "description": "data module"
     }
   ],
   "dependencies": [
     {
       "module_name": "@minecraft/server",
-      "version": "2.0.0-alpha"
+      "version": "2.0.0-beta"
     },
     {
       "module_name": "@minecraft/server-ui",
-      "version": "2.0.0-alpha"
+      "version": "2.0.0-beta"
     },
     {
       "module_name": "@minecraft/server-gametest",
-      "version": "2.0.0-alpha"
+      "version": "1.0.0-beta"
     }
   ]
 }

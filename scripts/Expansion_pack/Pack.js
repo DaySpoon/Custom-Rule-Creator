@@ -1,7 +1,6 @@
-import { Player, system, world } from "@minecraft/server"
-import { event, loadOldSaveData, loadSaveData, random2, ruleData } from "../Mains"
+import { Player, system, world, BlockTypes, EffectTypes, EntityTypes, ItemTypes } from "@minecraft/server"
+import { event, loadOldSaveData, loadSaveData, ruleData } from "../Mains"
 import { ActionFormData, MessageFormData, ModalFormData } from "@minecraft/server-ui"
-
 /*
 標準プロパティ
    ruleDisplay: Object; //UIに表示したときのテキスト
@@ -16,8 +15,7 @@ import { ActionFormData, MessageFormData, ModalFormData } from "@minecraft/serve
    ruleData() //ルールをデータに保存します(必須。これが無ければ設定されない)
    getRuleDatas() //指定したルールを取得します(場合によって使う。ruleFormで設定した変数を使う時は必須。返り値は配列。)
    event() //イベントを出力します(必須。これが無ければイベントが出力されない)
-ここでは拡張パックを導入することができます。ただし、現時点で追加できるのは検知のみです。
-もし実行関連を追加したい場合はこのアドオンの内部システム自体を改造する必要があります。
+ここでは拡張パックを導入することができます。ここで追加できるのは検知機能です。
 作った拡張パックは配布することができます。ただしアドオン作成者のyoutubeリンクやこのアドオンを作った人などの明記をしてください。
 By DaySpからぁげぇい
 youtubeリンク:https://www.youtube.com/channel/UCK4Nbt4uT9L57PgM_euvnZQ

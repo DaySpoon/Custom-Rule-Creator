@@ -1,13 +1,22 @@
-import { world, system, WeatherType, ItemStack, MolangVariableMap, Player, BlockTypes, EffectTypes, EntityTypes, ItemTypes, WorldAfterEvents, EntityHurtAfterEvent, WorldBeforeEvents, Block, GameMode, DyeColor, Entity, EntityDamageCause, HudElement, HudElementsCount, EasingType, EffectType, DimensionTypes, DimensionType } from "@minecraft/server"
+import { world, system, WeatherType, ItemStack, MolangVariableMap, Player, BlockTypes, EffectTypes, EntityTypes, ItemTypes, WorldAfterEvents, EntityHurtAfterEvent, WorldBeforeEvents, Block, GameMode, DyeColor, Entity, EntityDamageCause, HudElement, HudElementsCount, EasingType, EffectType, DimensionTypes, DimensionType, PlatformType, MemoryTier, EquipmentSlot, EntityComponentTypes, InputMode, InputPermissionCategory, InputButton, ButtonState, Dimension, BlockVolume, GraphicsMode, InputInfo, MoonPhase, StructureAnimationMode, StructureRotation } from "@minecraft/server"
 import { ActionFormData, ModalFormData, MessageFormData } from "@minecraft/server-ui"
-import { EmergencySystemControl, EntityMaxDistance, EntityMinDistance, PlayerMaxDistance, PlayerMinDistance, enableAddonStatus, maxDetectedTriggerTime, mobLimit } from "./config";
+import { EmergencySystemControl, EntityMaxDistance, EntityMinDistance, ExcludeGameModes, PlayerMaxDistance, PlayerMinDistance, enableAddonStatus, interval, maxCreateRule, maxDetectedTriggerTime, mobLimit } from "./config";
 import { pack } from "./Expansion_pack/Pack";
 import { enableExpansionPack } from "./config";
-import { cause, getRuleIdList, particles, rule, rule2, rules2Data, rulesData } from "./datas/assets";
+import { cause, getLastRuleId, getRuleIdList, particles, rule, rule2, rules2Data, rulesData } from "./datas/assets";
+import { system_pack } from "./Expansion_pack/SystemPack";
+import playerDropBeforeEvent from "./lib/events/playerDropBeforeEvent";
+import playerXpChangeAfterEvent from "./lib/events/playerXpChangeAfterEvent";
+import playerFishingAfterEvent from "./lib/events/playerFishingAfterEvent"
+import playerGetOffAfterEvent from "./lib/events/playerGetOffAfterEvent";
+import playerRideAfterEvent from "./lib/events/playerRideAfterEvent";
+import playerMoveAfterEvent, { PlayerInputKey } from "./lib/events/playerMoveAfterEvent";
+import entityTagChangeAfterEvent from "./lib/events/entityTagChangeAfterEvent";
+import playerUseChestBeforeEvent from "./lib/events/playerUseChestBeforeEvent";
 // 弄らないでください
 //定義
 
-const Version = "pre-1.0"
+const Version = "1.0"
 const AddonName = "CRC"
 const label = [
     "all(デフォルト)",
@@ -16,28 +25,62 @@ const label = [
 ]
 let error = false;
 let ands = rulesData.specialDisplayName.concat()
+const DataRule = rule
 export const and = ands
 export let r = []
 export let s = []
+export let sr = []
+export let ss = []
 export let packs = []
 export let packNames = []
+export const packID = {
+    packName: [],
+    displayName: [],
+    ruleId: []
+}
+export const systemPackID = {
+    packName: [],
+    displayName: [],
+    ruleId: []
+}
 // export let eventQueue = []
 let n;
+let sys;
 if (enableExpansionPack) {
     n = pack.map(p => p.ruleDisplay)
-    n.forEach(n => {
+    sys = system_pack.map(p => p.displayName)
+    n.forEach((n, id) => {
         r.push(`${n.nameSpace}:${n.name}`)
         s.push(`${n.name}`)
         packNames.push(`${n.nameSpace}`)
+        packID.packName.push(`${n.nameSpace}`)
+        packID.displayName.push(`${n.name}`)
+        packID.ruleId.push(rule[rule.length - 1].ruleId + (id + 1))
+        rulesData.displayNameId.push(rule[rule.length - 1].ruleId + (id + 1))
     })
+    // sys.forEach((sys, id) => {
+    //     sr.push(`${sys.nameSpace}:${sys.name}`)
+    //     ss.push(`${sys.name}`)
+    //     packNames.push(`${sys.nameSpace}`)
+    //     systemPackID.packName.push(`${sys.nameSpace}`)
+    //     systemPackID.displayName.push(`${sys.name}`)
+    //     systemPackID.ruleId.push(rule2[getLastRuleId().index].ruleId + (id + 1))
+    //     rules2Data.displayNameId.push(rule2[getLastRuleId().index].ruleId + (id + 1))
+    //     rules2Data.displayName.push(`${sys.nameSpace}:${sys.name}`)
+    //     rule2.push({
+    //         displayName: sys.name,
+    //         nameSpace: sys.nameSpace,
+    //         ruleId: rule2[getLastRuleId().index].ruleId + (id + 1),
+    //         visible: true,
+    //         existsubData: system_pack[id].subData.enable,
+    //         ruleDataJSON: system_pack[id].subData.enable ? system_pack[id].ruleDataJSON : null,
+    //         pack: true
+    //     })
+    // })
     packs = packNames.filter((element, index) => {
         return packNames.indexOf(element) == index;
     })
 }
-export const random = EntityTypes.getAll().map((b) => b.id)
-export const random2 = EffectTypes.getAll().map((b) => b.getName()).sort()
-export const random3 = BlockTypes.getAll().map((b) => b.id)
-export const random4 = ItemTypes.getAll().map((b) => b.id)
 //セットアップ用
 world.afterEvents.playerSpawn.subscribe((data) => {
     if (data.initialSpawn) {
@@ -82,14 +125,28 @@ world.afterEvents.playerSpawn.subscribe((data) => {
         }
         system.runTimeout(() => {
             if (enableAddonStatus) {
-                data.player.sendMessage(`§l§a[${AddonName} ${Version}] §r§a現在アドオンが導入されています。\n§a製作者のリンク: https://www.youtube.com/@user-dayspoonkarkar\n§aダウンロードリンク: https://github.com/DaySpoon/Custom-Rule-Creator/releases`)
+                data.player.sendMessage(`§l§b[${AddonName} ${Version}] §r§a現在アドオンが導入されています。\n§a製作者のリンク: https://www.youtube.com/@user-dayspoonkarkar\n§aダウンロードリンク: https://github.com/DaySpoon/Custom-Rule-Creator/releases`)
             }
-            data.player.sendMessage(`${enableExpansionPack ? `§l§2[${AddonName} ${Version}] §r§e拡張パック導入済：${packs.length}個のパックがあります` : ``}`)
+            data.player.sendMessage(`${enableExpansionPack ? `§l§s[${AddonName} ${Version}] §r§e拡張パック導入済：${packs.length}個のパックがあります` : ``}`)
         }, 40)
     }
 })
+system.beforeEvents.startup.subscribe((data) => {
+    system.run(() => {
+        world.sendMessage(`§l§b[${AddonName} ${Version}] §r§a導入完了！`)
+        if (world.getDynamicProperty("Crash") === true) {
+            world.sendMessage(`§l§b[${AddonName} ${Version}] §r§c前回ワールドの処理が非常に重くなったため強制的にシャットダウンされました。現在イベントは停止中です。Config設定から再度ONにし直してください。`)
+            world.setDynamicProperty("Crash")
+        }
+    })
+})
 //ここから下はシステムです
 world.afterEvents.itemUse.subscribe(data => {
+    const random = EntityTypes.getAll().map((b) => b.id)
+    const random2 = EffectTypes.getAll().map((b) => b.getName()).sort()
+    const random3 = BlockTypes.getAll().map((b) => b.id)
+    const random4 = ItemTypes.getAll().map((b) => b.id)
+    const dims = DimensionTypes.getAll().map(d => d.typeId)
     let main = []
     let sub = []
     const item = data.itemStack.typeId
@@ -129,7 +186,7 @@ world.afterEvents.itemUse.subscribe(data => {
         ui.button("ルールリスト", "textures/ui/creative_icon")
         ui.button("セーブデータ", "textures/ui/copy")
         ui.button("設定", "textures/ui/icon_setting")
-        if (typeof debug !== 'undefined') ui.button("デバッグ", "textures/ui/ui_debug_glyph_color")
+        if (typeof debug != "undefined") ui.button("デバッグ", "textures/ui/ui_debug_glyph_color")
         ui.button("gui.close")
         ui.show(sender).then(({ selection, canceled }) => {
             if (canceled) return;
@@ -152,24 +209,37 @@ world.afterEvents.itemUse.subscribe(data => {
                     }
                     let ui = new ActionFormData()
                     ui.title("ルールリスト")
-                    ui.body(`決められてるルール:${parse.length}\n現時点で出来る組み合わせ:${rulesData.visible.length * (and.length - 2) * (rules2Data.visible.length)}通り！`)
+                    ui.body(`決められてるルール: ${parse.length} / ${maxCreateRule} §7(最大数を超えると全ルールが消えます！)§r\n\n現時点で出来る組み合わせ: ${rulesData.visible.length * (and.length - 2) * (rules2Data.visible.length)}通り！`)
                     ui.button("§aルールを作る", "textures/ui/color_plus")
                     ui.button("§cルールを削除", "textures/ui/trash")
                     ui.button("§eランダムなルール", "textures/ui/icon_random")
                     for (let i = 0; i < rule1.length; i++) {
-                        ui.button(`§l§2ルール${i + 1}${parse[i].and === 0 ? "" : `§r§6(複数条件)`}\n§r§eもし${ruleNames[parse[i].if] ?? `Unknown ruleId ${parse[i].if + 1000}`}${rules2Data.name[parse[i].run] ?? `Unknown ruleId ${parse[i].run}`}`)
+                        ui.button(`§l§2ルール${i + 1}${parse[i].and === 0 ? "" : `§r§6(複数条件)`}\n§r§eもし${ruleNames[parse[i].if] ?? `Unknown ruleId ${parse[i].if + 1000}`}${rules2Data.name[parse[i].ruleId.run] ?? `Unknown ruleId ${parse[i].run}`}`)
                     }
                     ui.show(sender).then(({ selection, canceled }) => {
                         if (canceled) return;
+                        const j = selection - 3
                         if (selection === 0) {
                             let ui = new ModalFormData()
                             ui.title("作成")
                             ui.dropdown("もし", ruleNames)
                             ui.dropdown("かつ", and)
                             ui.dropdown("これを実行", rules2Data.displayName)
+                            ui.divider()
                             ui.toggle("フィルター機能", false)
                             ui.slider("確率", 1, 100, 1, 100)
                             ui.slider("検知してからの実行間隔(秒)", 0, maxDetectedTriggerTime, 1, 0)
+                            ui.label("高度な検知")
+                            ui.divider()
+                            ui.toggle("レッドストーンパワーが特定の値になった時に検知", false)
+                            ui.toggle("特定の値以上で検知", false)
+                            ui.toggle("特定の値以下で検知", false)
+                            ui.slider("レッドストーンパワー", 0, 15, 1)
+                            ui.divider()
+                            ui.toggle("特定のエリアで検知", false)
+                            ui.textField("特定のエリア(始点)", "0 0 0")
+                            ui.textField("特定のエリア(終点)", "5 5 5")
+                            ui.dropdown("ディメンション", dims, dims.findIndex((d) => d === "minecraft:overworld"))
                             ui.show(sender).then(({ formValues, canceled }) => {
                                 if (canceled) return;
                                 let rule = {
@@ -182,12 +252,49 @@ world.afterEvents.itemUse.subscribe(data => {
                                         entites: null
                                     },
                                     ruleId: {
-                                        if: rulesData.id[formValues[0] + 1],
-                                        run: rules2Data.id[formValues[2]]
+                                        if: rulesData.displayNameId[formValues[0]],
+                                        run: rules2Data.displayNameId[formValues[2]]
+                                    },
+                                    detect: {
+                                        redstonePower: {
+                                            enable: formValues[6],
+                                            above: formValues[7],
+                                            below: formValues[8],
+                                            power: formValues[9]
+                                        },
+                                        area: {
+                                            enable: formValues[10],
+                                            StartArea: null,
+                                            EndArea: null,
+                                            dim: dims[formValues[13]]
+                                        }
                                     },
                                     par: formValues[4],
                                     time: formValues[5],
                                     id: password(6)
+                                }
+                                if (formValues[10] === true) {
+                                    try {
+                                        const sta = formValues[11].split(" ")
+                                        const ena = formValues[12].split(" ")
+                                        if (!isNaN(sta[1]) && !isNaN(sta[2]) && !isNaN(ena[1]) && !isNaN(ena[2])) {
+                                            const starea = { x: Number(sta[0]), y: Number(sta[1]), z: Number(sta[2]) }
+                                            const enarea = { x: Number(ena[0]), y: Number(ena[1]), z: Number(ena[2]) }
+                                            rule.detect.area.StartArea = starea
+                                            rule.detect.area.EndArea = enarea
+                                        }
+                                        else {
+                                            rule.detect.area.StartArea = null
+                                            rule.detect.area.EndArea = null
+                                            rule.detect.area.enable = false
+                                            sender.sendMessage(`§c無効なエリア指定形式のため、エリア指定が無効になりました。`)
+                                        }
+                                    } catch (e) {
+                                        rule.detect.area.StartArea = null
+                                        rule.detect.area.EndArea = null
+                                        rule.detect.area.enable = false
+                                        sender.sendMessage(`§c無効なエリア指定形式のため、エリア指定が無効になりました。`)
+                                    }
                                 }
                                 if (formValues[3] === true) {
                                     let ui = new ModalFormData()
@@ -236,7 +343,7 @@ world.afterEvents.itemUse.subscribe(data => {
                                 }
                                 function datase() {
                                     if (old_rule.length > formValues[0]) {
-                                        ruleData(sender, rule2[formValues[2]], rule)
+                                        ruleData(sender, rule2[rules2Data.displayNameId[formValues[2]]], rule)
                                     }
                                     else {
                                         if (enableExpansionPack === true) {
@@ -246,10 +353,10 @@ world.afterEvents.itemUse.subscribe(data => {
                                             }
                                             let i = formValues[0] - old_rule.length
                                             if (pack[i].ruleForm.enable) {
-                                                pack[i].ruleForm.form(sender, first, formValues, rule2[formValues[2]], rule)
+                                                pack[i].ruleForm.form(sender, first, formValues, rule2[rules2Data.displayNameId[formValues[2]]], rule)
                                             }
                                             else {
-                                                ruleData(sender, rule2[formValues[2]], rule)
+                                                ruleData(sender, rule2[rules2Data.displayNameId[formValues[2]]], rule)
                                             }
                                         }
                                         else {
@@ -263,7 +370,7 @@ world.afterEvents.itemUse.subscribe(data => {
                             if (rule1.length) {
                                 let data = []
                                 for (let i = 0; i < rule1.length; i++) {
-                                    data.push(`ルール${i + 1} : もし${ruleNames[parse[i].if] ?? `Unknown ruleId ${parse[i].if + 1000}`}${rules2Data.name[parse[i].run] ?? `Unknown ruleId ${parse[i].run}`}`)
+                                    data.push(`ルール${i + 1} : もし${ruleNames[parse[i].if] ?? `Unknown ruleId ${parse[i].if + 1000}`}${rules2Data.name[parse[i].ruleId.run] ?? `Unknown ruleId ${parse[i].run}`}`)
                                 }
                                 let ui = new ModalFormData()
                                 ui.title("§c削除")
@@ -335,87 +442,152 @@ world.afterEvents.itemUse.subscribe(data => {
                         }
                         else {
                             try {
+                                const edit = parse[selection - 3]
                                 let ui = new ActionFormData()
                                 ui.title(`ルール${selection - 2}`)
-                                ui.body(`\nもし: ${ruleNames[parse[selection - 3].if] ?? `Unknown ruleId ${parse[selection - 3].if + 1000}`}\nかつ: ${andNames[parse[selection - 3].and] ?? `Unknown ruleId ${parse[selection - 3].and + 999}`}\n実行: ${rules2Data.name[parse[selection - 3].run] ?? `Unknown ruleId ${parse[selection - 3].run}`}\n確率: ${parse[selection - 3].par}パーセント\nフィルター: ${parse[selection - 3].filter.enable}\n検知対象: ${parse[selection - 3].filter.entites !== null ? parse[selection - 3].filter.entites.join(",") : "none"}${parse[selection - 3].filter.except === true ? "以外" : ""}\n検知してからの実行間隔: ${parse[selection - 3].time ?? 0}秒\n\n`)
-                                // ui.button("ルールを変更する", "textures/ui/icon_setting")
+                                ui.body(`\nもし: ${ruleNames[parse[selection - 3].if] ?? `Unknown ruleId ${parse[selection - 3].if + 1000}`}\nかつ: ${andNames[parse[selection - 3].and] ?? `Unknown ruleId ${parse[selection - 3].and + 999}`}\n実行: ${rules2Data.name[parse[selection - 3].ruleId.run] ?? `Unknown ruleId ${parse[selection - 3].run}`}\n確率: ${parse[selection - 3].par}パーセント\nフィルター: ${parse[selection - 3].filter.enable}\n検知対象: ${parse[selection - 3].filter.entites !== null ? parse[selection - 3].filter.entites.join(",") : "none"}${parse[selection - 3].filter.except === true ? "以外" : ""}\n検知してからの実行間隔: ${parse[selection - 3].time ?? 0}秒`)
+                                ui.button("ルールを変更する", "textures/ui/icon_setting")
                                 ui.button("gui.close")
                                 ui.show(sender).then(({ selection, canceled }) => {
                                     if (canceled) return;
-                                    // if(selection === 0) {
-                                    //     let ui = new ModalFormData()
-                                    //     ui.title("変更")
-                                    //     ui.toggle("フィルター機能", parse[selection - 3].filter.enable)
-                                    //     ui.slider("確率", 1, 100, 1, parse[selection - 3].par)
-                                    //     ui.show(sender).then(({ formValues, canceled }) => {
-                                    //         if(canceled) return;
-                                    //         if(formValues[0] === true) {
-                                    //             let ui = new ModalFormData()
-                                    //             ui.title("フィルター機能")
-                                    //             ui.textField("エンティティId(複数追加可能)", "ex:minecraft:zombie,minecraft:creeper", parse[selection - 3].filter.entites !== null ? parse[selection - 3].filter.entites.join(",") : "")
-                                    //             ui.toggle("上記のエンティティ以外を検知する", parse[selection - 3].filter.except)
-                                    //             ui.show(sender).then(({ formValues, canceled }) => {
-                                    //                 if (canceled) return;
-                                    //                 if (isNaN(formValues[0])) {
-                                    //                     const entites = formValues[0].split(",")
-                                    //                     let rand = random
-                                    //                     if (formValues[1] === true) {
-                                    //                         try {
-                                    //                             // entites.forEach((type) => {
-                                    //                             //     if (rand.find((t) => t === type)) {
-                                    //                             //         const i = rand.findIndex((t) => t === type)
-                                    //                             //         rand.splice(i, 1)
-                                    //                             //     }
-                                    //                             // })
-                                    //                             // rule.filter.entites = rand
-                                    //                             parse[selection - 3].filter.except = true
-                                    //                             parse[selection - 3].filter.entites = entites
-                                    //                             sender.sendMessage("§aフィルター登録をしました。")
-                                    //                             setter()
-                                    //                         } catch (e) {
-                                    //                             sender.sendMessage(`§cエラーが発生しました。`)
-                                    //                         }
-                                    //                     }
-                                    //                     else {
-                                    //                         try {
-                                    //                             parse[selection - 3].filter.entites = entites
-                                    //                             sender.sendMessage("§aフィルター登録をしました。")
-                                    //                             datase()
-                                    //                         } catch (e) {
-                                    //                             sender.sendMessage(`§cエラーが発生しました。`)
-                                    //                         }
-                                    //                     }
-                                    //                 }
-                                    //                 else {
-                                    //                     sender.sendMessage("§cエンティティIdを入力してください。")
-                                    //                 }
-                                    //                 function datase() {
-                                    //                     if (old_rule.length > parse[selection - 3].if) {
-                                    //                         ruleData(sender, rules2Data.name[formValues[1]], rule)
-                                    //                     }
-                                    //                     else {
-                                    //                         if (enableExpansionPack === true) {
-                                    //                             let first = undefined
-                                    //                             if (world.getDynamicProperty("CRC:rules")) {
-                                    //                                 first = JSON.parse(world.getDynamicProperty("CRC:rules"))
-                                    //                             }
-                                    //                             let i = parse[selection - 3].if - old_rule.length
-                                    //                             if (pack[i].ruleForm.enable) {
-                                    //                                 pack[i].ruleForm.form(sender, first, formValues, rules2Data.name[parse[selection - 3].run], parse[selection - 3])
-                                    //                             }
-                                    //                             else {
-                                    //                                 ruleData(sender, rules2Data.name[parse[selection - 3].run], parse[selection - 3])
-                                    //                             }
-                                    //                         }
-                                    //                         else {
-                                    //                             sender.sendMessage("§cエラーが発生しました。")
-                                    //                         }
-                                    //                     }
-                                    //                 }
-                                    //             })
-                                    //         }
-                                    //     })
-                                    // }
+                                    if (selection === 0) {
+                                        let ui = new ModalFormData()
+                                        ui.title("変更")
+                                        ui.dropdown("もし", ruleNames, edit.if)
+                                        ui.dropdown("かつ", and, edit.and)
+                                        ui.dropdown("これを実行", rules2Data.displayName, edit.run)
+                                        ui.divider()
+                                        ui.toggle("フィルター機能", edit.filter.enable)
+                                        ui.slider("確率", 1, 100, 1, edit.par)
+                                        ui.slider("検知してからの実行間隔(秒)", 0, maxDetectedTriggerTime, 1, edit.time)
+                                        ui.label("高度な検知")
+                                        ui.divider()
+                                        ui.toggle("レッドストーンパワーが特定の値になった時に検知", edit.detect.redstonePower.enable)
+                                        ui.toggle("特定の値以上で検知", edit.detect.redstonePower.above)
+                                        ui.toggle("特定の値以下で検知", edit.detect.redstonePower.below)
+                                        ui.slider("レッドストーンパワー", 0, 15, 1, edit.detect.redstonePower.power)
+                                        ui.divider()
+                                        ui.toggle("特定のエリアで検知", edit.detect.area.enable)
+                                        ui.textField("特定のエリア(始点)", "0 0 0", edit.detect.area.StartArea === null ? "" : `${edit.detect.area.StartArea.x} ${edit.detect.area.StartArea.y} ${edit.detect.area.StartArea.z}`)
+                                        ui.textField("特定のエリア(終点)", "5 5 5", edit.detect.area.EndArea === null ? "" : `${edit.detect.area.EndArea.x} ${edit.detect.area.EndArea.y} ${edit.detect.area.EndArea.z}`)
+                                        ui.dropdown("ディメンション", dims, dims.findIndex((d) => d === edit.detect.area.dim))
+                                        ui.show(sender).then(({ formValues, canceled }) => {
+                                            if (canceled) return;
+                                            let rule = {
+                                                if: formValues[0],
+                                                run: formValues[2],
+                                                and: formValues[1],
+                                                filter: {
+                                                    enable: formValues[3],
+                                                    except: edit.filter.except,
+                                                    entites: null
+                                                },
+                                                ruleId: {
+                                                    if: rulesData.displayNameId[formValues[0]],
+                                                    run: rules2Data.displayNameId[formValues[2]]
+                                                },
+                                                detect: {
+                                                    redstonePower: {
+                                                        enable: formValues[6],
+                                                        above: formValues[7],
+                                                        below: formValues[8],
+                                                        power: formValues[9]
+                                                    },
+                                                    area: {
+                                                        enable: formValues[10],
+                                                        StartArea: null,
+                                                        EndArea: null,
+                                                        dim: dims[formValues[13]]
+                                                    }
+                                                },
+                                                par: formValues[4],
+                                                time: formValues[5],
+                                                id: password(6)
+                                            }
+                                            if (formValues[10] === true) {
+                                                try {
+                                                    const sta = formValues[11].split(" ")
+                                                    const ena = formValues[12].split(" ")
+                                                    if (!isNaN(sta[1]) && !isNaN(sta[2]) && !isNaN(ena[1]) && !isNaN(ena[2])) {
+                                                        const starea = { x: Number(sta[0]), y: Number(sta[1]), z: Number(sta[2]) }
+                                                        const enarea = { x: Number(ena[0]), y: Number(ena[1]), z: Number(ena[2]) }
+                                                        rule.detect.area.StartArea = starea
+                                                        rule.detect.area.EndArea = enarea
+                                                    }
+                                                    else {
+                                                        rule.detect.area.StartArea = null
+                                                        rule.detect.area.EndArea = null
+                                                        rule.detect.area.enable = false
+                                                        sender.sendMessage(`§c無効なエリア指定形式のため、エリア指定が無効になりました。`)
+                                                    }
+                                                } catch (e) {
+                                                    rule.detect.area.StartArea = null
+                                                    rule.detect.area.EndArea = null
+                                                    rule.detect.area.enable = false
+                                                    sender.sendMessage(`§c無効なエリア指定形式のため、エリア指定が無効になりました。`)
+                                                }
+                                            }
+                                            if (formValues[3] === true) {
+                                                let ui = new ModalFormData()
+                                                ui.title("フィルター機能")
+                                                ui.textField("エンティティId(複数追加可能)", "ex:minecraft:zombie,minecraft:creeper", edit.filter.entites.join(","))
+                                                ui.toggle("上記のエンティティ以外を検知する", edit.filter.except)
+                                                ui.show(sender).then(({ formValues, canceled }) => {
+                                                    if (canceled) return;
+                                                    if (isNaN(formValues[0])) {
+                                                        const entites = formValues[0].split(",")
+                                                        let rand = random
+                                                        if (formValues[1] === true) {
+                                                            try {
+                                                                // entites.forEach((type) => {
+                                                                //     if (rand.find((t) => t === type)) {
+                                                                //         const i = rand.findIndex((t) => t === type)
+                                                                //         rand.splice(i, 1)
+                                                                //     }
+                                                                // })
+                                                                // rule.filter.entites = rand
+                                                                rule.filter.except = true
+                                                                rule.filter.entites = entites
+                                                                sender.sendMessage("§aフィルター登録をしました。")
+                                                                datase()
+                                                            } catch (e) {
+                                                                sender.sendMessage(`§cエラーが発生しました。`)
+                                                            }
+                                                        }
+                                                        else {
+                                                            try {
+                                                                rule.filter.entites = entites
+                                                                sender.sendMessage("§aフィルター登録をしました。")
+                                                                datase()
+                                                            } catch (e) {
+                                                                sender.sendMessage(`§cエラーが発生しました。`)
+                                                            }
+                                                        }
+                                                    }
+                                                    else {
+                                                        sender.sendMessage("§cエンティティIdを入力してください。")
+                                                    }
+                                                })
+                                            }
+                                            else {
+                                                datase()
+                                            }
+                                            function datase() {
+                                                if (old_rule.length > formValues[0]) {
+                                                    const subr = findSubData(edit)
+                                                    ruleData(sender, rule2[rules2Data.displayNameId[formValues[2]]], rule, false, undefined, true, false, subr.subRule, j)
+                                                }
+                                                else {
+                                                    if (enableExpansionPack === true) {
+                                                        sender.sendMessage(`§c現時点では拡張パックの編集は行えません`)
+                                                    }
+                                                    else {
+                                                        sender.sendMessage("§cエラーが発生しました。")
+                                                    }
+                                                }
+                                            }
+                                        })
+                                    }
                                 })
                             } catch (e) {
                                 sender.sendMessage(`§c[Custom Rule Creator System Error] エラーが発生しました。このルールデータは破損している可能性があります。`)
@@ -504,7 +676,7 @@ world.afterEvents.itemUse.subscribe(data => {
                         if (rule1.length) {
                             let data = []
                             for (let i = 0; i < rule1.length; i++) {
-                                data.push(`ルール${i + 1} : もし${ruleNames[parse[i].if] ?? `Unknown ruleId ${parse[i].if + 1000}`}${rules2Data.name[parse[i].run] ?? `Unknown ruleId ${parse[i].run}`}\n`)
+                                data.push(`ルール${i + 1} : もし${ruleNames[parse[i].if] ?? `Unknown ruleId ${parse[i].if + 1000}`}${rules2Data.name[parse[i].ruleId.run] ?? `Unknown ruleId ${parse[i].run}`}\n`)
                             }
                             let ui = new MessageFormData()
                             ui.title("エクスポート")
@@ -668,9 +840,11 @@ world.afterEvents.itemUse.subscribe(data => {
                         ui.toggle("アイテムをイベント検知対象に含む(危険！)", world.getDynamicProperty("Item"))
                         ui.toggle("経験値をイベント検知対象に含む(危険！)", world.getDynamicProperty("Xp"))
                         ui.toggle("一定のモブ数を超えたらkillする", world.getDynamicProperty("EntityKill"))
+                        ui.divider()
                         ui.slider("奈落判定の高さ", -70, 0, 1, world.getDynamicProperty("void_detect"))
                         ui.slider("最高高度判定の高さ", 2, 320, 1, world.getDynamicProperty("sky_detect"))
                         ui.slider("スポーン座標の高さ", -64, 320, 1, world.getDynamicProperty("spawnY"))
+                        ui.divider()
                         ui.dropdown("複数検知エンティティ", label, world.getDynamicProperty("sp_detect"))
                         ui.toggle("イベントの停止", world.getDynamicProperty("Stop"))
                         ui.show(sender).then(({ formValues, canceled }) => {
@@ -696,7 +870,7 @@ world.afterEvents.itemUse.subscribe(data => {
                     }
                 })
             }
-            else if (selection === 3 && typeof debug !== 'undefined') {
+            else if (selection === 4 && typeof debug != "undefined") {
                 let ui = new ActionFormData()
                 ui.title("デバッグ")
                 ui.body(`デバッグモード画面\n\nアドオンデータ保管合計データ: ${world.getDynamicPropertyTotalByteCount()}B\n${getRuleIdList()}\n\n\n\n\n\n`)
@@ -717,6 +891,13 @@ world.afterEvents.itemUse.subscribe(data => {
                         ui.textField("Entities Id", "ids")
                         ui.textField("発動までの時間", "Num", "1.0")
                         ui.textField("確率", "Num", "100")
+                        ui.toggle("レッドストーンパワーが特定の値になった時に検知", false)
+                        ui.toggle("特定の値以上で検知", false)
+                        ui.toggle("特定の値以下で検知", false)
+                        ui.slider("レッドストーンパワー", 0, 15, 1)
+                        ui.toggle("特定のエリアで検知", false)
+                        ui.textField("特定のエリア(始点)", "0 0 0")
+                        ui.textField("特定のエリア(終点)", "5 5 5")
                         ui.show(sender).then(({ formValues, canceled }) => {
                             if (canceled) return;
                             if (isNaN(formValues[7]) || formValues[5] === false) {
@@ -734,6 +915,19 @@ world.afterEvents.itemUse.subscribe(data => {
                                         ruleId: {
                                             if: rulesData.id[formValues[3]],
                                             run: rules2Data.id[formValues[4]]
+                                        },
+                                        detect: {
+                                            redstonePower: {
+                                                enable: formValues[9],
+                                                above: formValues[10],
+                                                below: formValues[11],
+                                                power: formValues[12]
+                                            },
+                                            area: {
+                                                enable: formValues[13],
+                                                StartArea: formValues[14],
+                                                EndArea: formValues[15]
+                                            }
                                         },
                                         par: formValues[9],
                                         time: formValues[8],
@@ -876,6 +1070,31 @@ system.runInterval(() => {
                     if (entity.isClimbing) {
                         event(entity, first, 35)
                     }
+                    if (entity.dimension.getWeather() === WeatherType.Clear) {
+                        event(entity, first, 157)
+                    }
+                    if (entity.dimension.getWeather() === WeatherType.Rain) {
+                        event(entity, first, 158)
+                    }
+                    if (entity.dimension.getWeather() === WeatherType.Thunder) {
+                        event(entity, first, 159)
+                    }
+                    if (world.getMoonPhase() === MoonPhase.FullMoon) event(entity, first, 160)
+                    if (world.getMoonPhase() === MoonPhase.WaningGibbous) event(entity, first, 161)
+                    if (world.getMoonPhase() === MoonPhase.FirstQuarter) event(entity, first, 162)
+                    if (world.getMoonPhase() === MoonPhase.WaningCrescent) event(entity, first, 163)
+                    if (world.getMoonPhase() === MoonPhase.NewMoon) event(entity, first, 164)
+                    if (world.getMoonPhase() === MoonPhase.WaxingCrescent) event(entity, first, 165)
+                    if (world.getMoonPhase() === MoonPhase.LastQuarter) event(entity, first, 166)
+                    if (world.getMoonPhase() === MoonPhase.WaxingGibbous) event(entity, first, 167)
+                    if (entity.getEffects().length > 0) event(entity, first, 168)
+                    else event(entity, first, 169)
+                    try {
+                        if (entity.getBlockFromViewDirection().block !== undefined) {
+                            const block = entity.getBlockFromViewDirection().block
+                            event(entity, first, 73, undefined, undefined, block)
+                        }
+                    } catch (e) { }
                 })
                 if (sender.isJumping) {
                     event(sender, first, 2)
@@ -939,6 +1158,88 @@ system.runInterval(() => {
                 else {
                     event(sender, first, 51)
                 }
+                if (sender.clientSystemInfo.platformType === PlatformType.Console) {
+                    event(sender, first, 70)
+                }
+                if (sender.clientSystemInfo.platformType === PlatformType.Desktop) {
+                    event(sender, first, 71)
+                }
+                if (sender.clientSystemInfo.platformType === PlatformType.Mobile) {
+                    event(sender, first, 72)
+                }
+                if (sender.inputInfo.lastInputModeUsed === InputMode.Gamepad) {
+                    event(sender, first, 82)
+                }
+                if (sender.inputInfo.lastInputModeUsed === InputMode.KeyboardAndMouse) {
+                    event(sender, first, 83)
+                }
+                if (sender.inputInfo.lastInputModeUsed === InputMode.MotionController) {
+                    event(sender, first, 84)
+                }
+                if (sender.inputInfo.lastInputModeUsed === InputMode.Touch) {
+                    event(sender, first, 85)
+                }
+                if (sender.inputInfo.touchOnlyAffectsHotbar === true) {
+                    event(sender, first, 86)
+                }
+                if (sender.inputInfo.getButtonState(InputButton.Jump) === ButtonState.Pressed) {
+                    event(sender, first, 87)
+                }
+                if (sender.inputInfo.getButtonState(InputButton.Jump) === ButtonState.Released) {
+                    event(sender, first, 88)
+                }
+                if (sender.inputInfo.getButtonState(InputButton.Sneak) === ButtonState.Pressed) {
+                    event(sender, first, 89)
+                }
+                if (sender.inputInfo.getButtonState(InputButton.Sneak) === ButtonState.Released) {
+                    event(sender, first, 90)
+                }
+                if (sender.clientSystemInfo.memoryTier === MemoryTier.SuperLow) {
+                    event(sender, first, 146)
+                }
+                if (sender.clientSystemInfo.memoryTier === MemoryTier.Low) {
+                    event(sender, first, 147)
+                }
+                if (sender.clientSystemInfo.memoryTier === MemoryTier.Mid) {
+                    event(sender, first, 148)
+                }
+                if (sender.clientSystemInfo.memoryTier === MemoryTier.High) {
+                    event(sender, first, 149)
+                }
+                if (sender.clientSystemInfo.memoryTier === MemoryTier.SuperHigh) {
+                    event(sender, first, 150)
+                }
+                if (sender.graphicsMode === GraphicsMode.Simple) {
+                    event(sender, first, 151)
+                }
+                if (sender.graphicsMode === GraphicsMode.Deferred) {
+                    event(sender, first, 152)
+                }
+                if (sender.graphicsMode === GraphicsMode.RayTraced) {
+                    event(sender, first, 153)
+                }
+                if (sender.graphicsMode === GraphicsMode.Fancy) {
+                    event(sender, first, 154)
+                }
+                if (sender.isOp()) {
+                    event(sender, first, 155)
+                }
+                else {
+                    event(sender, first, 156)
+                }
+                if (sender.dimension.id === "overworld") {
+                    event(sender, first, 91)
+                }
+                if (sender.dimension.id === "nether") {
+                    event(sender, first, 92)
+                }
+                if (sender.dimension.id === "end") {
+                    event(sender, first, 93)
+                }
+                if (sender.getBlockFromViewDirection().block !== undefined) {
+                    const block = sender.getBlockFromViewDirection().block
+                    event(sender, first, 73, undefined, undefined, block)
+                }
                 // if (sender.dimension.getBlock({ x: Math.floor(sender.location.x), y: Math.floor(sender.location.y), z: Math.floor(sender.location.z) }).isAir && !sender.isOnGround) {
                 //     event(sender, first, 69)
                 // }
@@ -991,12 +1292,12 @@ system.runInterval(() => {
             })
         } catch (e) { }
     }
-}, 1)
+}, interval)
 system.runInterval(() => {
     if (world.getDynamicProperty("CRC:rules") !== undefined) {
         for (const sender of world.getPlayers()) {
             const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
-            event(sender, first, rulesData.visible.length - 3)
+            event(sender, first, rulesData.visible.length - 6)
         }
     }
 }, 200)
@@ -1004,7 +1305,7 @@ system.runInterval(() => {
     if (world.getDynamicProperty("CRC:rules") !== undefined) {
         for (const sender of world.getPlayers()) {
             const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
-            event(sender, first, rulesData.visible.length - 2)
+            event(sender, first, rulesData.visible.length - 5)
         }
     }
 }, 600)
@@ -1012,10 +1313,34 @@ system.runInterval(() => {
     if (world.getDynamicProperty("CRC:rules") !== undefined) {
         for (const sender of world.getPlayers()) {
             const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
-            event(sender, first, rulesData.visible.length - 1)
+            event(sender, first, rulesData.visible.length - 4)
         }
     }
 }, 1200)
+system.runInterval(() => {
+    if (world.getDynamicProperty("CRC:rules") !== undefined) {
+        for (const sender of world.getPlayers()) {
+            const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+            event(sender, first, rulesData.visible.length - 3)
+        }
+    }
+}, 300 * 20)
+system.runInterval(() => {
+    if (world.getDynamicProperty("CRC:rules") !== undefined) {
+        for (const sender of world.getPlayers()) {
+            const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+            event(sender, first, rulesData.visible.length - 2)
+        }
+    }
+}, 600 * 20)
+system.runInterval(() => {
+    if (world.getDynamicProperty("CRC:rules") !== undefined) {
+        for (const sender of world.getPlayers()) {
+            const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+            event(sender, first, rulesData.visible.length - 1)
+        }
+    }
+}, 1800 * 20)
 world.beforeEvents.explosion.subscribe(data => {
     const breaks = data.getImpactedBlocks()
     if (data.source !== undefined) {
@@ -1067,7 +1392,7 @@ world.beforeEvents.playerPlaceBlock.subscribe(data => {
 world.afterEvents.buttonPush.subscribe(data => {
     const sender = data.source
     const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
-    event(sender, first, 7, undefined, undefined, data.block)
+    event(sender, first, 7, undefined, undefined, data.block, sender.location, 15)
 })
 world.beforeEvents.chatSend.subscribe(data => {
     const sender = data.sender
@@ -1127,8 +1452,10 @@ world.beforeEvents.playerInteractWithBlock.subscribe(data => {
 })
 world.afterEvents.leverAction.subscribe(data => {
     const sender = data.player
+    const block = data.block
     const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
-    event(sender, first, 13)
+    if (data.isPowered) event(sender, first, 13, undefined, undefined, block, sender.location, 15)
+    else event(sender, first, 100, undefined, undefined, block, sender.location, 0)
 })
 world.afterEvents.entitySpawn.subscribe(data => {
     if (world.getDynamicProperty("Item") === true) {
@@ -1215,7 +1542,38 @@ world.afterEvents.playerGameModeChange.subscribe(data => {
 })
 world.afterEvents.playerInputPermissionCategoryChange.subscribe((data) => {
     const sender = data.player
+    const input = data.category
     const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    if (input === InputPermissionCategory.Camera) {
+        event(sender, first, 130)
+    }
+    if (input === InputPermissionCategory.Dismount) {
+        event(sender, first, 131)
+    }
+    if (input === InputPermissionCategory.Mount) {
+        event(sender, first, 132)
+    }
+    if (input === InputPermissionCategory.Jump) {
+        event(sender, first, 133)
+    }
+    if (input === InputPermissionCategory.LateralMovement) {
+        event(sender, first, 134)
+    }
+    if (input === InputPermissionCategory.MoveBackward) {
+        event(sender, first, 135)
+    }
+    if (input === InputPermissionCategory.MoveForward) {
+        event(sender, first, 136)
+    }
+    if (input === InputPermissionCategory.MoveLeft) {
+        event(sender, first, 137)
+    }
+    if (input === InputPermissionCategory.MoveRight) {
+        event(sender, first, 138)
+    }
+    if (input === InputPermissionCategory.Movement) {
+        event(sender, first, 139)
+    }
     event(sender, first, 53)
 })
 world.afterEvents.entityHealthChanged.subscribe((data) => {
@@ -1244,9 +1602,8 @@ world.afterEvents.dataDrivenEntityTrigger.subscribe((data) => {
         event(sender, first, 58)
     } catch (e) { }
 })
-world.afterEvents.playerLeave.subscribe((data) => {
-    const players = world.getAllPlayers()
-    const sender = players[getRandom(0, players.length - 1)]
+world.beforeEvents.playerLeave.subscribe((data) => {
+    const sender = data.player
     const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
     event(sender, first, 59)
 })
@@ -1260,8 +1617,8 @@ world.afterEvents.messageReceive.subscribe((data) => {
     const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
     event(sender, first, 62)
 })
-world.afterEvents.itemUseOn.subscribe((data) => {
-    const sender = data.source
+world.afterEvents.pistonActivate.subscribe((data) => {
+    const sender = world.getPlayers({ location: data.block.location, closest: 1, maxDistance: 10 })[0]
     const block = data.block
     const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
     event(sender, first, 64, undefined, undefined, block)
@@ -1278,16 +1635,233 @@ world.afterEvents.itemStopUseOn.subscribe((data) => {
     const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
     event(sender, first, 66, undefined, undefined, block)
 })
+world.afterEvents.playerInputModeChange.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.player
+    const input = data.newInputModeUsed
+    if (input === InputMode.Gamepad) {
+        event(sender, first, 74)
+    }
+    if (input === InputMode.KeyboardAndMouse) {
+        event(sender, first, 75)
+    }
+    if (input === InputMode.MotionController) {
+        event(sender, first, 76)
+    }
+    if (input === InputMode.Touch) {
+        event(sender, first, 77)
+    }
+})
+world.afterEvents.playerButtonInput.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.player
+    const input = data.newButtonState
+    const button = data.button
+    if (input === ButtonState.Pressed && button === InputButton.Jump) {
+        event(sender, first, 78)
+    }
+    if (input === ButtonState.Pressed && button === InputButton.Sneak) {
+        event(sender, first, 79)
+    }
+    if (input === ButtonState.Released && button === InputButton.Jump) {
+        event(sender, first, 80)
+    }
+    if (input === ButtonState.Released && button === InputButton.Sneak) {
+        event(sender, first, 81)
+    }
+})
+world.afterEvents.worldLoad.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = world.getPlayers()[getRandomR(0, world.getPlayers().length - 1, true)]
+    event(sender, first, 94)
+})
+world.afterEvents.gameRuleChange.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = world.getPlayers()[getRandomR(0, world.getPlayers().length - 1, true)]
+    event(sender, first, 95)
+})
+world.afterEvents.pressurePlatePop.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const block = data.block
+    const sender = data.dimension.getEntities({ location: block.location, closest: 1 })[0]
+    event(sender, first, 96, undefined, undefined, block, sender.location, data.redstonePower)
+})
+world.afterEvents.pressurePlatePush.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.source
+    const block = data.block
+    event(sender, first, 97, undefined, undefined, block, sender.location, data.redstonePower)
+})
+world.afterEvents.tripWireTrip.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const block = data.block
+    for (const sender of data.sources) {
+        if (data.isPowered) event(sender, first, 98, undefined, undefined, block, sender.location, 15)
+        else event(sender, first, 99, undefined, undefined, block, sender.location, 0)
+    }
+})
+world.afterEvents.targetBlockHit.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const block = data.block
+    const sender = data.source
+    event(sender, first, 101, undefined, undefined, block, sender.location, data.redstonePower)
+})
+world.afterEvents.weatherChange.subscribe((data) => {
+    const senders = world.getPlayers().filter(p => p.dimension.id === data.dimension)
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    if (data.previousWeather === WeatherType.Clear) {
+        senders.forEach((sender) => {
+            event(sender, first, 140)
+        })
+    }
+    if (data.previousWeather === WeatherType.Rain) {
+        senders.forEach((sender) => {
+            event(sender, first, 141)
+        })
+    }
+    if (data.previousWeather === WeatherType.Thunder) {
+        senders.forEach((sender) => {
+            event(sender, first, 142)
+        })
+    }
+    if (data.newWeather === WeatherType.Clear) {
+        senders.forEach((sender) => {
+            event(sender, first, 143)
+        })
+    }
+    if (data.newWeather === WeatherType.Rain) {
+        senders.forEach((sender) => {
+            event(sender, first, 144)
+        })
+    }
+    if (data.newWeather === WeatherType.Thunder) {
+        senders.forEach((sender) => {
+            event(sender, first, 145)
+        })
+    }
+})
+playerDropBeforeEvent.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.player
+    event(sender, first, 102)
+    const boo = IsCancelEvent(sender, first, 102)
+    if (boo) {
+        data.cancel = true
+        event(sender, first, 69)
+    }
+})
+playerXpChangeAfterEvent.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.player
+    event(sender, first, 103)
+})
+playerFishingAfterEvent.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.player
+    const item = data.itemEntity
+    if (data.result) {
+        event(sender, first, 104, undefined, undefined, item, item.location)
+        event(item, first, 105, undefined, undefined, sender, item.location)
+    }
+    else {
+        event(sender, first, 106)
+    }
+})
+playerGetOffAfterEvent.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.player
+    const entity = data.entity
+    event(sender, first, 107, undefined, undefined, entity)
+    event(entity, first, 108, undefined, undefined, sender)
+})
+playerRideAfterEvent.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.player
+    const entity = data.entity
+    event(sender, first, 109, undefined, undefined, entity)
+    event(entity, first, 110, undefined, undefined, sender)
+})
+playerMoveAfterEvent.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.player
+    const firstkeys = data.firstKeys
+    const keys = data.keys
+    const device = data.device
+    if (firstkeys.includes(PlayerInputKey.W)) event(sender, first, 111)
+    if (firstkeys.includes(PlayerInputKey.S)) event(sender, first, 112)
+    if (firstkeys.includes(PlayerInputKey.A)) event(sender, first, 113)
+    if (firstkeys.includes(PlayerInputKey.D)) event(sender, first, 114)
+    if (firstkeys.includes(PlayerInputKey.SHIFT)) event(sender, first, 115)
+    if (firstkeys.includes(PlayerInputKey.SPACE)) event(sender, first, 116)
+    if (keys.includes(PlayerInputKey.W)) event(sender, first, 117)
+    if (keys.includes(PlayerInputKey.S)) event(sender, first, 118)
+    if (keys.includes(PlayerInputKey.A)) event(sender, first, 119)
+    if (keys.includes(PlayerInputKey.D)) event(sender, first, 120)
+    if (keys.includes(PlayerInputKey.SHIFT)) event(sender, first, 121)
+    if (keys.includes(PlayerInputKey.SPACE)) event(sender, first, 122)
+})
+entityTagChangeAfterEvent.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.entity
+    event(sender, first, 123)
+})
+playerUseChestBeforeEvent.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.player
+    const block = data.interactBlock
+    if (data.isLarge) {
+        if (data.isFirstEvent) {
+            event(sender, first, 126, undefined, undefined, data.chestPair.first)
+            event(sender, first, 127, undefined, undefined, data.chestPair.second)
+            if (IsCancelEvent(sender, first, 126)) {
+                data.cancel = true
+                event(sender, first, 69)
+            }
+            if (IsCancelEvent(sender, first, 127)) {
+                data.cancel = true
+                event(sender, first, 69)
+            }
+        }
+        else {
+            event(sender, first, 128, undefined, undefined, data.chestPair.first)
+            event(sender, first, 129, undefined, undefined, data.chestPair.second)
+            if (IsCancelEvent(sender, first, 128)) {
+                data.cancel = true
+                event(sender, first, 69)
+            }
+            if (IsCancelEvent(sender, first, 129)) {
+                data.cancel = true
+                event(sender, first, 69)
+            }
+        }
+    }
+    else {
+        if (data.isFirstEvent) {
+            event(sender, first, 125, undefined, undefined, block)
+            if (IsCancelEvent(sender, first, 125)) {
+                data.cancel = true
+                event(sender, first, 69)
+            }
+        }
+        else {
+            event(sender, first, 124, undefined, undefined, block)
+            if (IsCancelEvent(sender, first, 124)) {
+                data.cancel = true
+                event(sender, first, 69)
+            }
+        }
+    }
+})
 /**
 * イベントデータを出力します
 * @param {Player} sender イベントのターゲット
 * @param {Object} first オーナー
-* @param {int} index イベントID 使用済: 0-66
+* @param {int} index イベントID 使用済: 0-167
 * @param {String} variable データ比較用変数
 * @param {any} variableData 固有データ変数
 * @param {Entity | Block} data 検知別オブジェクト
 */
-export function event(sender = Player.prototype, first = Object, index, variable = undefined, variableData = undefined, data = undefined) {
+export function event(sender = Player.prototype, first = Object, index, variable = undefined, variableData = undefined, data = undefined, location = undefined, redstonePower = undefined) {
     if (first !== undefined) {
         if (world.getDynamicProperty("CRC:rules") !== undefined) {
             // if (!eventQueue.length) {
@@ -1305,312 +1879,229 @@ export function event(sender = Player.prototype, first = Object, index, variable
             try {
                 if (world.getDynamicProperty("Stop") === false) {
                     const det_value = world.getDynamicProperty("sp_detect")
-                    if (det_value === 0) {
-                        if (sender.getDynamicProperty("eventQueue")) {
-                            let eventQueue = JSON.parse(sender.getDynamicProperty("eventQueue"))
-                            if (!eventQueue.length) {
-                                eventQueue.push(index)
-                                sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
-                            }
-                            else {
-                                if (!eventQueue.includes(index)) {
+                    const rules = first.rule.filter((tag, i) => tag.ruleId.if === index + 1000)
+                    const rulesa2 = first.rule.filter((tag, i) => tag.and !== 0)
+                    if (rules.length > 0 || rulesa2.length > 0) {
+                        if (det_value === 0) {
+                            if (sender.getDynamicProperty("eventQueue")) {
+                                let eventQueue = JSON.parse(sender.getDynamicProperty("eventQueue"))
+                                if (!eventQueue.length) {
                                     eventQueue.push(index)
                                     sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
                                 }
                                 else {
-                                    system.run(() => {
-                                        try {
-                                            eventQueue.shift()
+                                    if (!eventQueue.includes(index)) {
+                                        eventQueue.push(index)
+                                        sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
+                                    }
+                                    else {
+                                        system.run(() => {
+                                            try {
+                                                eventQueue.shift()
+                                                sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
+                                            } catch (e) { }
+                                        })
+                                    }
+                                }
+                            }
+                            else {
+                                const queue = [index]
+                                sender.setDynamicProperty(`eventQueue`, JSON.stringify(queue))
+                            }
+                        }
+                        else if (det_value === 1) {
+                            if (sender.typeId === "minecraft:player") {
+                                if (sender.getDynamicProperty("eventQueue")) {
+                                    let eventQueue = JSON.parse(sender.getDynamicProperty("eventQueue"))
+                                    if (!eventQueue.length) {
+                                        eventQueue.push(index)
+                                        sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
+                                    }
+                                    else {
+                                        if (!eventQueue.includes(index)) {
+                                            eventQueue.push(index)
                                             sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
-                                        } catch (e) { }
-                                    })
+                                        }
+                                        else {
+                                            system.run(() => {
+                                                try {
+                                                    eventQueue.shift()
+                                                    sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
+                                                } catch (e) { }
+                                            })
+                                        }
+                                    }
+                                }
+                                else {
+                                    const queue = [index]
+                                    sender.setDynamicProperty(`eventQueue`, JSON.stringify(queue))
                                 }
                             }
                         }
                         else {
-                            const queue = [index]
-                            sender.setDynamicProperty(`eventQueue`, JSON.stringify(queue))
-                        }
-                    }
-                    else if (det_value === 1) {
-                        if (sender.typeId === "minecraft:player") {
-                            if (sender.getDynamicProperty("eventQueue")) {
-                                let eventQueue = JSON.parse(sender.getDynamicProperty("eventQueue"))
-                                if (!eventQueue.length) {
-                                    eventQueue.push(index)
-                                    sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
-                                }
-                                else {
-                                    if (!eventQueue.includes(index)) {
+                            if (sender.typeId !== "minecraft:player") {
+                                if (sender.getDynamicProperty("eventQueue")) {
+                                    let eventQueue = JSON.parse(sender.getDynamicProperty("eventQueue"))
+                                    if (!eventQueue.length) {
                                         eventQueue.push(index)
                                         sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
                                     }
                                     else {
-                                        system.run(() => {
-                                            try {
-                                                eventQueue.shift()
-                                                sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
-                                            } catch (e) { }
-                                        })
-                                    }
-                                }
-                            }
-                            else {
-                                const queue = [index]
-                                sender.setDynamicProperty(`eventQueue`, JSON.stringify(queue))
-                            }
-                        }
-                    }
-                    else {
-                        if (sender.typeId !== "minecraft:player") {
-                            if (sender.getDynamicProperty("eventQueue")) {
-                                let eventQueue = JSON.parse(sender.getDynamicProperty("eventQueue"))
-                                if (!eventQueue.length) {
-                                    eventQueue.push(index)
-                                    sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
-                                }
-                                else {
-                                    if (!eventQueue.includes(index)) {
-                                        eventQueue.push(index)
-                                        sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
-                                    }
-                                    else {
-                                        system.run(() => {
-                                            try {
-                                                eventQueue.shift()
-                                                sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
-                                            } catch (e) { }
-                                        })
-                                    }
-                                }
-                            }
-                            else {
-                                const queue = [index]
-                                sender.setDynamicProperty(`eventQueue`, JSON.stringify(queue))
-                            }
-                        }
-                    }
-                    const rules = first.rule.filter((tag, i) => tag.if === index)
-                    let datas = []
-                    rules.forEach((tag, i) => {
-                        datas.push(tag)
-                    })
-                    if (world.getDimension(sender.dimension.id).getEntities({ location: sender.location, maxDistance: 100 }).length < mobLimit || !world.getDynamicProperty("EntityKill")) {
-                        datas.forEach((rule => {
-                            let v = false;
-                            if (rule.hasOwnProperty(variable)) {
-                                v = true;
-                            }
-                            let pars = getRandom(1, 100)
-                            let time = rule.time ?? 0
-                            try {
-                                if (rule.filter.enable === true) {
-                                    if (rule.filter.except === true) {
-                                        if (!rule.filter.entites.includes(sender.typeId)) {
-                                            if (rule.and === 0) {
-                                                if (time === 0) {
-                                                    detect_true()
-                                                }
-                                                else {
-                                                    system.runTimeout(() => {
-                                                        detect_true()
-                                                    }, time * 20)
-                                                }
-                                            }
-                                            else {
-                                                const eventQueue = JSON.parse(sender.getDynamicProperty("eventQueue"))
-                                                if (eventQueue.includes(rule.and - 1)) {
-                                                    if (time === 0) {
-                                                        detect_true()
-                                                    }
-                                                    else {
-                                                        system.runTimeout(() => {
-                                                            detect_true()
-                                                        }, time * 20)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    else {
-                                        if (rule.filter.entites.includes(sender.typeId)) {
-                                            if (rule.and === 0) {
-                                                if (time === 0) {
-                                                    detect_true()
-                                                }
-                                                else {
-                                                    system.runTimeout(() => {
-                                                        detect_true()
-                                                    }, time * 20)
-                                                }
-                                            }
-                                            else {
-                                                const eventQueue = JSON.parse(sender.getDynamicProperty("eventQueue"))
-                                                if (eventQueue.includes(rule.and - 1)) {
-                                                    if (time === 0) {
-                                                        detect_true()
-                                                    }
-                                                    else {
-                                                        system.runTimeout(() => {
-                                                            detect_true()
-                                                        }, time * 20)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                else {
-                                    if (rule.and === 0) {
-                                        if (time === 0) {
-                                            detect_true()
+                                        if (!eventQueue.includes(index)) {
+                                            eventQueue.push(index)
+                                            sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
                                         }
                                         else {
-                                            system.runTimeout(() => {
-                                                detect_true()
-                                            }, time * 20)
+                                            system.run(() => {
+                                                try {
+                                                    eventQueue.shift()
+                                                    sender.setDynamicProperty(`eventQueue`, JSON.stringify(eventQueue))
+                                                } catch (e) { }
+                                            })
+                                        }
+                                    }
+                                }
+                                else {
+                                    const queue = [index]
+                                    sender.setDynamicProperty(`eventQueue`, JSON.stringify(queue))
+                                }
+                            }
+                        }
+                        let datas = []
+                        rules.forEach((tag, i) => {
+                            datas.push(tag)
+                        })
+                        if (world.getDimension(sender.dimension.id).getEntities({ location: sender.location, maxDistance: 100 }).length < mobLimit || !world.getDynamicProperty("EntityKill")) {
+                            datas.forEach((rule => {
+                                let v = false;
+                                if (rule.hasOwnProperty(variable)) {
+                                    v = true;
+                                }
+                                let pars = getRandom(1, 100)
+                                let time = rule.time ?? 0
+                                try {
+                                    if (rule.filter.enable === true) {
+                                        if (rule.filter.except === true) {
+                                            if (!rule.filter.entites.includes(sender.typeId)) {
+                                                dete()
+                                            }
+                                        }
+                                        else {
+                                            if (rule.filter.entites.includes(sender.typeId)) {
+                                                dete()
+                                            }
                                         }
                                     }
                                     else {
-                                        const eventQueue = JSON.parse(sender.getDynamicProperty("eventQueue"))
-                                        if (eventQueue.includes(rule.and - 1)) {
+                                        dete()
+                                    }
+                                    function dete() {
+                                        if (rule.detect.redstonePower.enable === true) {
+                                            if (redstonePower === undefined) {
+                                                deteb()
+                                            }
+                                            else {
+                                                if (rule.detect.redstonePower.above || rule.detect.redstonePower.below) {
+                                                    if (!rule.detect.redstonePower.below) {
+                                                        if (rule.detect.redstonePower.power <= redstonePower) {
+                                                            detea()
+                                                        }
+                                                    }
+                                                    else if (!rule.detect.redstonePower.above) {
+                                                        if (rule.detect.redstonePower.power >= redstonePower) {
+                                                            detea()
+                                                        }
+                                                    }
+                                                    else {
+                                                        if (rule.detect.redstonePower.power <= redstonePower ||
+                                                            rule.detect.redstonePower.power >= redstonePower) {
+                                                            detea()
+                                                        }
+                                                    }
+                                                }
+                                                else {
+                                                    if (rule.detect.redstonePower.power === redstonePower) {
+                                                        detea()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else detea()
+                                    }
+                                    function detea() {
+                                        if (rule.detect.area.enable === true) {
+                                            try {
+                                                const volume = new BlockVolume(rule.detect.area.StartArea, rule.detect.area.EndArea)
+                                                const sta = rule.detect.area.StartArea
+                                                const ena = rule.detect.area.EndArea
+                                                const volumeX = ena.x - sta.x + 1;
+                                                const volumeY = ena.y - sta.y + 1;
+                                                const volumeZ = ena.z - sta.z + 1;
+                                                const entite = world.getDimension(rule.detect.area.dim).getEntities({ location: rule.detect.area.StartArea, volume: { x: volumeX, y: volumeY, z: volumeZ }, type: sender.typeId })
+                                                if (entite.find(e => e.id === sender.id)) {
+                                                    deteb()
+                                                }
+                                            } catch (e) {
+                                                deteb()
+                                            }
+                                        }
+                                        else deteb()
+                                    }
+                                    function deteb() {
+                                        if (rule.and === 0) {
                                             if (time === 0) {
                                                 detect_true()
                                             }
                                             else {
-                                                system.runTimeout(() => {
+                                                if (world.getDynamicProperty(`${rule.id}`) === undefined) {
+                                                    world.setDynamicProperty(`${rule.id}`, time)
+                                                    system.runTimeout(() => {
+                                                        detect_true()
+                                                    }, time * 20)
+                                                }
+                                                else {
+                                                    world.setDynamicProperty(`${rule.id}`, world.getDynamicProperty(`${rule.id}`) + time)
+                                                    system.runTimeout(() => {
+                                                        detect_true()
+                                                        world.setDynamicProperty(`${rule.id}`)
+                                                    }, world.getDynamicProperty(`${rule.id}`) * 20)
+                                                }
+                                            }
+                                        }
+                                        else {
+                                            const eventQueue = JSON.parse(sender.getDynamicProperty("eventQueue"))
+                                            if (eventQueue.includes(rule.and - 1)) {
+                                                if (time === 0) {
                                                     detect_true()
-                                                }, time * 20)
+                                                }
+                                                else {
+                                                    if (world.getDynamicProperty(`${rule.id}`) === undefined) {
+                                                        world.setDynamicProperty(`${rule.id}`, time)
+                                                        system.runTimeout(() => {
+                                                            detect_true()
+                                                        }, time * 20)
+                                                    }
+                                                    else {
+                                                        world.setDynamicProperty(`${rule.id}`, world.getDynamicProperty(`${rule.id}`) + time)
+                                                        system.runTimeout(() => {
+                                                            detect_true()
+                                                            world.setDynamicProperty(`${rule.id}`)
+                                                        }, world.getDynamicProperty(`${rule.id}`) * 20)
+                                                    }
+                                                }
                                             }
                                         }
                                     }
-                                }
-                                function detect_true() {
-                                    if (JSON.stringify(rule[variable]) === JSON.stringify(variableData) || v === false) {
-                                        system.run(() => {
-                                            try {
-                                                if (pars <= rule.par) {
-                                                    if (rule.run === 0) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"max":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        if (data === undefined) {
-                                                            sender.dimension.createExplosion({ x: sender.location.x, y: sender.location.y, z: sender.location.z }, getRandom(sub.min, sub.max), { causesFire: sub.fire, allowUnderwater: sub.water })
-                                                        }
-                                                        else {
-                                                            data.dimension.createExplosion({ x: data.location.x, y: data.location.y, z: data.location.z }, getRandom(sub.min, sub.max), { causesFire: sub.fire, allowUnderwater: sub.water })
-                                                        }
-                                                    }
-                                                    else if (rule.run === 1) {
-                                                        sender.kill()
-                                                    }
-                                                    else if (rule.run === 2) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        const { x, y, z } = sender.getViewDirection()
-                                                        sender.applyKnockback(x * -sub.x, z * -sub.x, sub.w * -sub.x, sub.x * 1)
-                                                    }
-                                                    else if (rule.run === 3) {
-                                                        const players = world.getPlayers({ gameMode: GameMode.survival }).filter(p => p.name !== sender.name)
-                                                        const target = players[getRandom(0, players.length - 1, true)]
-                                                        const tagetLocation = target.location
-                                                        world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
-                                                        sender.teleport(tagetLocation)
-                                                    }
-                                                    else if (rule.run === 4) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"block":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        if (data === undefined) {
-                                                            const { x, y, z } = sender.location
-                                                            const view = sub.view ?? false
-                                                            if (view) {
-                                                                const dir = sender.getViewDirection()
-                                                                sender.dimension.setBlockType({ x: Math.floor(x + sub.x + dir.x), y: Math.floor(y + sub.y + dir.y), z: Math.floor(z + sub.z + dir.z) }, sub.block)
-                                                            }
-                                                            else {
-                                                                sender.dimension.setBlockType({ x: x + sub.x, y: y + sub.y, z: z + sub.z }, sub.block)
-                                                            }
-                                                        }
-                                                        else {
-                                                            data.dimension.setBlockType({ x: data.location.x + sub.x, y: data.location.y + sub.y, z: data.location.z + sub.z }, sub.block)
-                                                        }
-                                                    }
-                                                    else if (rule.run === 5) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"damage":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        const entity = sender.dimension.getEntities({ location: sender.location, minDistance: 1, closest: 1, type: sub.entitytype })[0]
-                                                        if (entity === undefined) {
-                                                            if (data === undefined) {
-                                                                sender.applyDamage(sub.damage, { cause: sub.causes })
-                                                            }
-                                                            else {
-                                                                sender.applyDamage(sub.damage, { cause: sub.causes, damagingProjectile: data })
-                                                            }
-                                                        }
-                                                        else {
-                                                            if (data === undefined) {
-                                                                sender.applyDamage(sub.damage, { cause: sub.causes, damagingEntity: entity })
-                                                            }
-                                                            else {
-                                                                sender.applyDamage(sub.damage, { cause: sub.causes, damagingEntity: entity, damagingProjectile: data })
-                                                            }
-                                                        }
-                                                    }
-                                                    else if (rule.run === 6) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"spawn":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        if (data === undefined) {
-                                                            const { x, y, z } = sender.location
-                                                            sender.dimension.spawnEntity(sub.spawn, { x: x, y: y, z: z })
-                                                        }
-                                                        else {
-                                                            data.dimension.spawnEntity(sub.spawn, { x: data.location.x, y: data.location.y, z: data.location.z })
-                                                        }
-                                                    }
-                                                    else if (rule.run === 7) {
-                                                        sender.teleport({ x: sender.location.x, y: sender.location.y + 400, z: sender.location.z })
-                                                    }
-                                                    else if (rule.run === 8) {
-                                                        try {
+                                    function detect_true() {
+                                        if (JSON.stringify(rule[variable]) === JSON.stringify(variableData) || v === false) {
+                                            system.run(() => {
+                                                try {
+                                                    const random = EntityTypes.getAll().map((b) => b.id)
+                                                    const random2 = EffectTypes.getAll().map((b) => b.getName()).sort()
+                                                    const random3 = BlockTypes.getAll().map((b) => b.id)
+                                                    const random4 = ItemTypes.getAll().map((b) => b.id)
+                                                    if (pars <= rule.par) {
+                                                        if (rule.ruleId.run === 0) {
                                                             let se = [];
                                                             first.subRule.forEach((s) => {
                                                                 se.push(JSON.stringify(s))
@@ -1621,699 +2112,1200 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                                 subs2.push(JSON.parse(tag))
                                                             })
                                                             const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                            world.getDimension(sender.dimension.id).playSound("firework.launch", sender.location, { volume: 1, pitch: 0.5 })
-                                                            let s = system.runInterval(() => {
-                                                                const molang = new MolangVariableMap()
-                                                                molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
-                                                                try {
-                                                                    sender.dimension.spawnParticle("minecraft:lava_particle", sender.location, molang)
-                                                                } catch (e) {
-
-                                                                }
-                                                            })
-                                                            system.runTimeout(() => {
-                                                                try {
-                                                                    sender.dimension.createExplosion(sender.location, getRandom(sub.min, sub.max), { causesFire: sub.fire, allowUnderwater: sub.water })
-                                                                } catch (e) {
-
-                                                                }
-                                                                system.clearRun(s)
-                                                            }, 20)
-                                                            sender.applyKnockback(0, 0, 5, 2 * (sub.speed ?? 1))
-                                                        } catch (e) {
-
-                                                        }
-                                                    }
-                                                    else if (rule.run === 9) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"time":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        sender.setOnFire(sub.time, sub.effect)
-                                                    }
-                                                    else if (rule.run === 10) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"effectId":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        sender.addEffect(sub.effectId, sub.time * 20, { amplifier: sub.level })
-                                                    }
-                                                    else if (rule.run === 11) {
-                                                        const { x, y, z } = sender.location
-                                                        if (sender.typeId === "minecraft:player") {
-                                                            if (sender.getDynamicProperty("indying") === false || !sender.getDynamicProperty("indying")) {
-                                                                sender.setDynamicProperty("indying", true)
-                                                                sender.inputPermissions.movementEnabled = false
-                                                                sender.camera.fade({ fadeColor: { red: 1, green: 1, blue: 1 }, fadeTime: { fadeInTime: 3, holdTime: 1.5, fadeOutTime: 1.5 } })
-                                                                sender.camera.setCamera("minecraft:free", { easeOptions: { easeType: EasingType.InQuart, easeTime: 3 }, facingLocation: { x: x, y: y + 100, z: z }, location: { x: x + 150, y: y + 160, z: z + 150 } })
-                                                                sender.onScreenDisplay.hideAllExcept()
-                                                                system.runTimeout(() => {
-                                                                    try {
-                                                                        sender.dimension.spawnParticle(`minecraft:dragon_dying_explosion`, sender.location)
-                                                                        world.getDimension(sender.dimension.id).playSound("random.pop", sender.location, { volume: 1, pitch: 0.5 })
-                                                                        sender.teleport({ x: x, y: y + 100, z: z })
-                                                                    } catch (e) { }
-                                                                }, 55)
-                                                                system.runTimeout(() => {
-                                                                    try {
-                                                                        sender.addEffect("invisibility", 100, { amplifier: 255, showParticles: false })
-                                                                        sender.kill()
-                                                                        system.runTimeout(() => {
-                                                                            try {
-                                                                                sender.onScreenDisplay.resetHudElements()
-                                                                                sender.camera.clear()
-                                                                                sender.inputPermissions.movementEnabled = true
-                                                                                sender.setDynamicProperty("indying", false)
-                                                                            } catch (e) {
-                                                                            }
-                                                                        }, 5)
-                                                                    } catch (e) {
-
-                                                                    }
-                                                                }, 65)
-                                                            }
-                                                        }
-                                                        else {
-                                                            sender.dimension.spawnParticle(`minecraft:dragon_dying_explosion`, { x: x + 0.5, y: y + 0.5, z: z + 0.5 })
-                                                            world.getDimension(sender.dimension.id).playSound("random.pop", { x: x + 0.5, y: y, z: z + 0.5 }, { volume: 1, pitch: 0.5 })
-                                                            sender.teleport({ x: x, y: y + 100, z: z })
-                                                            sender.addEffect("invisibility", 100, { amplifier: 255, showParticles: false })
-                                                            system.runTimeout(() => {
-                                                                try {
-                                                                    sender.kill()
-                                                                } catch (e) {
-
-                                                                }
-                                                            }, 10)
-                                                        }
-                                                    }
-                                                    else if (rule.run === 12) {
-                                                        try {
-                                                            let se = [];
-                                                            first.subRule.forEach((s) => {
-                                                                se.push(JSON.stringify(s))
-                                                            })
-                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"imax":`))
-                                                            let subs2 = []
-                                                            subs.forEach((tag, i) => {
-                                                                subs2.push(JSON.parse(tag))
-                                                            })
-                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                            const { x, y, z } = sender.location
-                                                            const inseki = sender.dimension.spawnEntity(`${sub.mob}`, { x: x + getRandom(-80, 80), y: y + getRandom(70, 120), z: z + getRandom(-80, 80) })
-                                                            system.runTimeout(() => {
-                                                                const i = system.runInterval(() => {
-                                                                    if (inseki !== undefined) {
-                                                                        try {
-                                                                            if (inseki.isOnGround) {
-                                                                                inseki.dimension.createExplosion({ x: inseki.location.x, y: inseki.location.y, z: inseki.location.z }, getRandom(sub.imax, sub.imin, false), { causesFire: sub.fire, allowUnderwater: sub.water })
-                                                                                inseki.kill()
-                                                                                system.clearRun(i)
-                                                                            }
-                                                                            else if (inseki.isFalling) {
-                                                                                inseki.setOnFire(0.1, true)
-                                                                                inseki.setRotation({ x: sender.getRotation().x + getRandom(-180, 180, true), y: sender.getRotation().y + getRandom(-180, 180, true) })
-                                                                                inseki.applyImpulse({ x: inseki.getViewDirection().x * Number(sub.x), y: Number(sub.y), z: inseki.getViewDirection().z * Number(-sub.z) })
-                                                                                const molang = new MolangVariableMap()
-                                                                                molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
-                                                                                inseki.dimension.spawnParticle("minecraft:knockback_roar_particle", { x: inseki.location.x, y: inseki.location.y, z: inseki.location.z }, molang)
-                                                                                inseki.dimension.spawnParticle("crc:inseki", { x: inseki.location.x, y: inseki.location.y, z: inseki.location.z })
-                                                                                world.getDimension(sender.dimension.id).playSound("random.explode", inseki.location, { pitch: 0.5, volume: 100 })
-                                                                            }
-                                                                            else {
-                                                                                system.clearRun(i)
-                                                                            }
-                                                                        } catch (e) {
-
-                                                                        }
-                                                                    }
-                                                                    else {
-                                                                        system.clearRun(i)
-                                                                    }
-                                                                })
-                                                                system.runTimeout(() => {
-                                                                    system.clearRun(i)
-                                                                }, 30)
-                                                            }, 2)
-                                                        } catch (e) {
-
-                                                        }
-                                                    }
-                                                    else if (rule.run === 13) {
-                                                        try {
-                                                            if (sender.typeId !== "minecraft:player") {
-                                                                let e = true;
-                                                                if (world.getDynamicProperty("Item") === false) {
-                                                                    if (sender.typeId !== "minecraft:item") {
-                                                                        e = true
-                                                                    }
-                                                                    else {
-                                                                        e = false;
-                                                                    }
-                                                                }
-                                                                if (e === true) {
-                                                                    let se = [];
-                                                                    first.subRule.forEach((s) => {
-                                                                        se.push(JSON.stringify(s))
-                                                                    })
-                                                                    const subs = se.filter((tag, i) => tag.startsWith(`{"hmax":`))
-                                                                    let subs2 = []
-                                                                    subs.forEach((tag, i) => {
-                                                                        subs2.push(JSON.parse(tag))
-                                                                    })
-                                                                    const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                                    sender.applyImpulse({ x: 0, y: getRandom(1, 3.5), z: 0 })
-                                                                    world.getDimension(sender.dimension.id).playSound("firework.launch", sender.location, { volume: 1, pitch: 0.5 })
-                                                                    let a = system.runTimeout(() => {
-                                                                        let s = system.runInterval(() => {
-                                                                            if (sender !== undefined) {
-                                                                                try {
-                                                                                    const entity = sender.dimension.getEntities({ closest: 1, minDistance: 1, location: sender.location })[0]
-                                                                                    if (entity !== undefined && entity.id !== sender.id) {
-                                                                                        let vec = {
-                                                                                            x: entity.location.x - sender.location.x,
-                                                                                            y: entity.location.y - sender.location.y,
-                                                                                            z: entity.location.z - sender.location.z
-                                                                                        }
-                                                                                        sender.applyImpulse(vec)
-                                                                                        const molang = new MolangVariableMap()
-                                                                                        molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
-                                                                                        sender.dimension.spawnParticle("minecraft:mobflame_single", { x: sender.location.x, y: sender.location.y, z: sender.location.z }, molang)
-                                                                                        sender.dimension.spawnParticle("minecraft:knockback_roar_particle", { x: sender.location.x, y: sender.location.y, z: sender.location.z }, molang)
-                                                                                        const target = sender.dimension.getEntities({ closest: 1, minDistance: 0.5, maxDistance: 2, location: sender.location })[0]
-                                                                                        if (target !== undefined && target.id !== sender.id) {
-                                                                                            system.clearRun(s)
-                                                                                            sender.dimension.createExplosion(sender.location, getRandom(sub.hmax, sub.hmin, false), { causesFire: sub.fire, allowUnderwater: sub.water })
-                                                                                            system.runTimeout(() => {
-                                                                                                system.clearRun(s)
-                                                                                            }, 20)
-                                                                                        }
-                                                                                        system.runTimeout(() => {
-                                                                                            system.clearRun(s)
-                                                                                        }, 100)
-                                                                                    }
-                                                                                    else {
-                                                                                        system.clearRun(s)
-                                                                                    }
-                                                                                } catch (e) {
-
-                                                                                }
-                                                                            }
-                                                                            else {
-                                                                                system.clearRun(s)
-                                                                            }
-                                                                        })
-                                                                    }, 20)
-                                                                    system.runTimeout(() => {
-                                                                        system.clearRun(a)
-                                                                    }, 100)
-                                                                }
-                                                            }
-                                                        } catch (e) {
-
-                                                        }
-                                                    }
-                                                    else if (rule.run === 14) {
-                                                        if (!sender.typeId === "minecraft:player") sender.remove()
-                                                    }
-                                                    else if (rule.run === 15) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        if (data === undefined) {
-                                                            const { x, y, z } = sender.location
-                                                            const view = sub.view ?? false
-                                                            if (view) {
-                                                                const dir = sender.getViewDirection()
-                                                                sender.dimension.setBlockType({ x: Math.floor(x + sub.x + dir.x), y: Math.floor(y + sub.y + dir.y), z: Math.floor(z + sub.z + dir.z) }, `${random3[getRandom(0, random3.length - 1)]}`)
+                                                            if (data === undefined) {
+                                                                sender.dimension.createExplosion({ x: sender.location.x, y: sender.location.y, z: sender.location.z }, getRandom(sub.min, sub.max), { source: sender, causesFire: sub.fire, allowUnderwater: sub.water })
                                                             }
                                                             else {
-                                                                sender.dimension.setBlockType({ x: x + sub.x, y: y + sub.y, z: z + sub.z }, `${random3[getRandom(0, random3.length - 1)]}`)
+                                                                data.dimension.createExplosion({ x: data.location.x, y: data.location.y, z: data.location.z }, getRandom(sub.min, sub.max), { causesFire: sub.fire, allowUnderwater: sub.water })
                                                             }
                                                         }
-                                                        else {
-                                                            data.dimension.setBlockType({ x: data.location.x + sub.x, y: data.location.y + sub.y, z: data.location.z + sub.z }, `${random3[getRandom(0, random3.length - 1)]}`)
+                                                        else if (rule.ruleId.run === 1) {
+                                                            sender.kill()
                                                         }
-                                                    }
-                                                    else if (rule.run === 16) {
-                                                        const { x, y, z } = sender.location
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"spawn":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        // if (data === undefined) {
-                                                        if (sender.typeId === "minecraft:player") {
-                                                            if (sender.getDynamicProperty("indying2") === false || !sender.getDynamicProperty("indying2")) {
-                                                                sender.setDynamicProperty("indying2", true)
-                                                                sender.camera.fade({ fadeColor: { red: 0, green: 0, blue: 0 }, fadeTime: { fadeInTime: 3, holdTime: 2.5, fadeOutTime: 1.5 } })
-                                                                sender.camera.setCamera("minecraft:free", { easeOptions: { easeType: EasingType.InQuart, easeTime: 3 }, location: { x: x, y: y, z: z } })
-                                                                sender.onScreenDisplay.hideAllExcept()
-                                                                system.runTimeout(() => {
-                                                                    try {
-                                                                        let asa = sender.location
-                                                                        sender.dimension.spawnParticle(`minecraft:huge_explosion_emitter`, sender.location)
-                                                                        world.getDimension(sender.dimension.id).playSound("random.explode", sender.location, { volume: 1, pitch: 0.5 })
-                                                                        sender.teleport({ x: x, y: -64, z: z })
-                                                                        system.runTimeout(() => {
-                                                                            try {
-                                                                                const entity = sender.dimension.spawnEntity(sub.spawn, asa)
-                                                                                sender.kill()
-                                                                                system.runTimeout(() => {
-                                                                                    try {
-                                                                                        sender.onScreenDisplay.resetHudElements()
-                                                                                        sender.camera.clear()
-                                                                                        sender.setDynamicProperty("indying2", false)
-                                                                                    } catch (e) {
-                                                                                    }
-                                                                                }, 5)
-                                                                            } catch (e) {
-                                                                            }
-                                                                        }, 2)
-                                                                    } catch (e) {
-                                                                    }
-                                                                }, 60)
-                                                            }
-                                                        }
-                                                        else {
-                                                            sender.dimension.spawnParticle(`minecraft:huge_explosion_emitter`, { x: x, y: y, z: z })
-                                                            world.getDimension(sender.dimension.id).playSound("random.explode", { x: x, y: y, z: z }, { volume: 1, pitch: 0.5 })
-                                                            sender.teleport({ x: x, y: -64, z: z })
-                                                            system.runTimeout(() => {
-                                                                try {
-                                                                    sender.kill()
-                                                                } catch (e) {
-
-                                                                }
-                                                            }, 10)
-                                                            sender.dimension.spawnEntity(sub.spawn, { x: x, y: y, z: z })
-                                                        }
-                                                        // }
-                                                        // else {
-                                                        //     sender.dimension.spawnParticle(`minecraft:huge_explosion_emitter`, { x: data.location.x, y: data.location.y, z: data.location.z })
-                                                        //     world.getDimension(sender.dimension.id).playSound("random.explode", { x: data.location.x, y: data.location.y, z: data.location.z }, { volume: 1, pitch: 0.5 })
-                                                        //     sender.dimension.spawnEntity(sub.spawn, { x: data.location.x + 0.5, y: data.location.y + 0.2, z: data.location.z + 0.5 })
-                                                        // }
-                                                    }
-                                                    else if (rule.run === 17) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"command":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        sender.runCommandAsync(`${sub.command}`).catch((r) => { })
-                                                    }
-                                                    else if (rule.run === 18) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        if (data !== undefined) {
-                                                            const { x, y, z } = data.location
-                                                            data.dimension.spawnItem(new ItemStack(`${random4[getRandom(0, random4.length - 1)]}`, getRandom(1, 64, true)), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
-                                                        }
-                                                        else {
-                                                            const { x, y, z } = sender.location
-                                                            sender.dimension.spawnItem(new ItemStack(`${random4[getRandom(0, random4.length - 1)]}`, getRandom(1, 64, true)), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
-                                                        }
-                                                    }
-                                                    else if (rule.run === 19) {
-                                                        sender.setRotation({ x: getRandom(-180, 90, false), y: getRandom(-180, 180, false) })
-                                                    }
-                                                    else if (rule.run === 20) {
-                                                        const players = world.getPlayers({ gameMode: GameMode.survival }).filter(p => p.name !== sender.name)
-                                                        const target = players[getRandom(0, players.length - 1, true)]
-                                                        const location = sender.location
-                                                        const tagetLocation = target.location
-                                                        world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
-                                                        sender.teleport(tagetLocation, { dimension: target.dimension, rotation: target.getRotation(), facingLocation: target.getViewDirection() })
-                                                        world.getDimension(target.dimension.id).playSound("mob.endermen.portal", target.location)
-                                                        target.teleport(location, { dimension: sender.dimension, rotation: sender.getRotation(), facingLocation: sender.getViewDirection() })
-                                                    }
-                                                    else if (rule.run === 21) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"time":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        if ((world.getTimeOfDay() + sub.time) < 24000) {
-                                                            world.setTimeOfDay(world.getTimeOfDay() + sub.time)
-                                                        }
-                                                        else {
-                                                            const day = (world.getTimeOfDay() + sub.time) - 24000
-                                                            world.setTimeOfDay(day)
-                                                        }
-                                                    }
-                                                    else if (rule.run === 22) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"time":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        if ((world.getTimeOfDay() - sub.time) > 0) {
-                                                            world.setTimeOfDay(world.getTimeOfDay() - sub.time)
-                                                        }
-                                                        else {
-                                                            const day = (world.getTimeOfDay() - sub.time) + 24000
-                                                            world.setTimeOfDay(day)
-                                                        }
-                                                    }
-                                                    else if (rule.run === 23) {
-                                                        const spawn = world.getDefaultSpawnLocation()
-                                                        sender.teleport({ x: spawn.x + 0.5, y: world.getDynamicProperty("spawnY"), z: spawn.z + 0.5 })
-                                                    }
-                                                    else if (rule.run === 24) {
-                                                        sender.addEffect(random2[getRandom(0, random2.length - 1)], getRandom(1, 300) * 20, { amplifier: getRandom(1, 255) })
-                                                    }
-                                                    else if (rule.run === 25) {
-                                                        const { x, y, z } = sender.location
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        if (sender.typeId === "minecraft:player") {
-                                                            world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
-                                                            sender.teleport({ x: sub.x + 0.5, y: sub.y, z: sub.z + 0.5 }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), checkForBlocks: sub.check })
-                                                        }
-                                                        else {
-                                                            world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
-                                                            sender.teleport({ x: sub.x + 0.5, y: sub.y, z: sub.z + 0.5 }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), keepVelocity: sub.keep, checkForBlocks: sub.check })
-                                                        }
-                                                    }
-                                                    else if (rule.run === 26) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        if (data !== undefined) {
-                                                            const { x, y, z } = data.location
-                                                            data.dimension.spawnItem(new ItemStack(`${sub.item}`, sub.amount), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
-                                                        }
-                                                        else {
-                                                            const { x, y, z } = sender.location
-                                                            sender.dimension.spawnItem(new ItemStack(`${sub.item}`, sub.amount), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
-                                                        }
-                                                    }
-                                                    else if (rule.run === 27) {
-                                                        const { x, y, z } = sender.location
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        if (sender.typeId === "minecraft:player") {
-                                                            world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
-                                                            sender.teleport({ x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), checkForBlocks: sub.check })
-                                                        }
-                                                        else {
-                                                            world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
-                                                            sender.teleport({ x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), keepVelocity: sub.keep, checkForBlocks: sub.check })
-                                                        }
-                                                    }
-                                                    else if (rule.run === 28) {
-                                                        const { x, y, z } = sender.location
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        if (data !== undefined) {
-                                                            if (data.typeId !== "minecraft:player" && typeof data === Entity) {
-                                                                data.applyImpulse({ x: sub.x, y: sub.y, z: sub.z })
-                                                            }
-                                                        }
-                                                        else {
-                                                            if (sender.typeId !== "minecraft:player") {
-                                                                sender.applyImpulse({ x: sub.x, y: sub.y, z: sub.z })
-                                                            }
-                                                        }
-                                                    }
-                                                    else if (rule.run === 29) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"particle":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        const direction = sender.getViewDirection()
-                                                        const loc = {
-                                                            x: sender.location.x + sub.x + direction.x,
-                                                            y: sender.location.y + sub.y + direction.y,
-                                                            z: sender.location.z + sub.z + direction.z
-                                                        }
-                                                        const molang = new MolangVariableMap()
-                                                        molang.setColorRGBA('variable.color', {
-                                                            red: Math.random(),
-                                                            green: Math.random(),
-                                                            blue: Math.random(),
-                                                            alpha: Math.random()
-                                                        });
-                                                        if (sub.visible === false) {
-                                                            sender.spawnParticle(sub.particle, loc, molang)
-                                                        }
-                                                        else {
-                                                            sender.dimension.spawnParticle(sub.particle, loc, molang)
-                                                        }
-                                                    }
-                                                    else if (rule.run === 30) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        const direction = sender.getViewDirection()
-                                                        const loc = {
-                                                            x: sender.location.x + sub.x + direction.x,
-                                                            y: sender.location.y + sub.y + direction.y,
-                                                            z: sender.location.z + sub.z + direction.z
-                                                        }
-                                                        const molang = new MolangVariableMap()
-                                                        molang.setColorRGBA('variable.color', {
-                                                            red: Math.random(),
-                                                            green: Math.random(),
-                                                            blue: Math.random(),
-                                                            alpha: Math.random()
-                                                        });
-                                                        if (sub.visible === false) {
-                                                            sender.spawnParticle(particles[getRandom(0, particles.length - 1)], loc, molang)
-                                                        }
-                                                        else {
-                                                            sender.dimension.spawnParticle(particles[getRandom(0, particles.length - 1)], loc, molang)
-                                                        }
-                                                    }
-                                                    else if (rule.run === 31) {
-                                                        if (data === undefined) {
-                                                            const { x, y, z } = sender.location
-                                                            sender.dimension.spawnEntity(random[getRandom(0, random.length - 1)], { x: x, y: y, z: z })
-                                                        }
-                                                        else {
-                                                            data.dimension.spawnEntity(random[getRandom(0, random.length - 1)], { x: data.location.x, y: data.location.y, z: data.location.z })
-                                                        }
-                                                    }
-                                                    else if (rule.run === 32) {
-                                                        try {
+                                                        else if (rule.ruleId.run === 2) {
                                                             let se = [];
                                                             first.subRule.forEach((s) => {
                                                                 se.push(JSON.stringify(s))
                                                             })
-                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"imax":`))
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
                                                             let subs2 = []
                                                             subs.forEach((tag, i) => {
                                                                 subs2.push(JSON.parse(tag))
                                                             })
                                                             const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                            const { x, y, z } = sender.location
-                                                            const inseki = sender.dimension.spawnEntity(`${sub.mob}`, { x: x, y: y + getRandom(10, 30), z: z })
-                                                            system.runTimeout(() => {
-                                                                const i = system.runInterval(() => {
-                                                                    if (inseki !== undefined) {
-                                                                        try {
-                                                                            if (inseki.isOnGround) {
-                                                                                inseki.dimension.createExplosion({ x: inseki.location.x, y: inseki.location.y, z: inseki.location.z }, getRandom(sub.imax, sub.imin, false), { causesFire: sub.fire, allowUnderwater: sub.water })
-                                                                                inseki.kill()
-                                                                                system.clearRun(i)
-                                                                            }
-                                                                            else if (inseki.isFalling) {
-                                                                                inseki.setOnFire(0.1, true)
-                                                                                if (sub.irregular) {
-                                                                                    inseki.setRotation({ x: sender.getRotation().x + getRandom(-180, 180, true), y: sender.getRotation().y + getRandom(-180, 180, true) })
-                                                                                }
-                                                                                else {
-                                                                                    inseki.setRotation({ x: sender.getRotation().x, y: sender.getRotation().y })
-                                                                                }
-                                                                                inseki.applyImpulse({ x: inseki.getViewDirection().x * Number(sub.x), y: Number(sub.y), z: inseki.getViewDirection().z * Number(-sub.z) })
-                                                                                const molang = new MolangVariableMap()
-                                                                                molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
-                                                                                inseki.dimension.spawnParticle("minecraft:knockback_roar_particle", { x: inseki.location.x, y: inseki.location.y, z: inseki.location.z }, molang)
-                                                                                world.getDimension(sender.dimension.id).playSound("random.explode", inseki.location, { pitch: 2, volume: 50 })
-                                                                            }
-                                                                            else {
-                                                                                system.clearRun(i)
-                                                                            }
-                                                                        } catch (e) {
-
-                                                                        }
-                                                                    }
-                                                                    else {
-                                                                        system.clearRun(i)
-                                                                    }
-                                                                })
-                                                                system.runTimeout(() => {
-                                                                    system.clearRun(i)
-                                                                }, 30)
-                                                            }, 2)
-                                                        } catch (e) {
-
+                                                            const { x, y, z } = sender.getViewDirection()
+                                                            sender.applyKnockback({ x: x * -sub.x, z: sub.w * x }, sub.w * 1)
                                                         }
-                                                    }
-                                                    else if (rule.run === 34) {
-                                                        try {
+                                                        else if (rule.ruleId.run === 3) {
+                                                            const players = world.getPlayers({ excludeGameModes: ExcludeGameModes }).filter(p => p.name !== sender.name)
+                                                            const target = players[getRandomR(0, players.length - 1, true)]
+                                                            const tagetLocation = target.location
+                                                            world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
+                                                            sender.teleport(tagetLocation)
+                                                        }
+                                                        else if (rule.ruleId.run === 4) {
                                                             let se = [];
                                                             first.subRule.forEach((s) => {
                                                                 se.push(JSON.stringify(s))
                                                             })
-                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"message":`))
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"block":`))
                                                             let subs2 = []
                                                             subs.forEach((tag, i) => {
                                                                 subs2.push(JSON.parse(tag))
                                                             })
                                                             const sub = subs2.find((sub, i) => sub.id === rule.id)
                                                             if (data === undefined) {
-                                                                sender.sendMessage(`${sub.message}`)
+                                                                const { x, y, z } = sender.location
+                                                                const view = sub.view ?? false
+                                                                if (view) {
+                                                                    const dir = sender.getViewDirection()
+                                                                    sender.dimension.setBlockType({ x: Math.floor(x + sub.x + dir.x), y: Math.floor(y + sub.y + dir.y), z: Math.floor(z + sub.z + dir.z) }, sub.block)
+                                                                }
+                                                                else {
+                                                                    sender.dimension.setBlockType({ x: x + sub.x, y: y + sub.y, z: z + sub.z }, sub.block)
+                                                                }
                                                             }
                                                             else {
-                                                                sender.sendMessage(`[${data.typeId}] ${sub.message}`)
-                                                            }
-                                                        } catch (e) {
-
-                                                        }
-                                                    }
-                                                    else if (rule.ruleId.run === -1) {
-                                                        let se = [];
-                                                        first.subRule.forEach((s) => {
-                                                            se.push(JSON.stringify(s))
-                                                        })
-                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"imax":`))
-                                                        let subs2 = []
-                                                        subs.forEach((tag, i) => {
-                                                            subs2.push(JSON.parse(tag))
-                                                        })
-                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                        try {
-                                                            eval(`${sub.script}`)
-                                                        } catch (e) {
-                                                            if (sub.error) {
-                                                                sender.sendMessage(`§b[Custom Rule Creator Development mode Error] ${e}`)
+                                                                data.dimension.setBlockType({ x: data.location.x + sub.x, y: data.location.y + sub.y, z: data.location.z + sub.z }, sub.block)
                                                             }
                                                         }
-                                                    }
-                                                    else {
+                                                        else if (rule.ruleId.run === 5) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"damage":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            const entity = sender.dimension.getEntities({ location: sender.location, minDistance: 1, closest: 1, type: sub.entitytype })[0]
+                                                            if (entity === undefined) {
+                                                                if (data === undefined) {
+                                                                    sender.applyDamage(sub.damage, { cause: sub.causes })
+                                                                }
+                                                                else {
+                                                                    sender.applyDamage(sub.damage, { cause: sub.causes, damagingProjectile: data })
+                                                                }
+                                                            }
+                                                            else {
+                                                                if (data === undefined) {
+                                                                    sender.applyDamage(sub.damage, { cause: sub.causes, damagingEntity: entity })
+                                                                }
+                                                                else {
+                                                                    sender.applyDamage(sub.damage, { cause: sub.causes, damagingEntity: entity, damagingProjectile: data })
+                                                                }
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 6) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"spawn":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            if (data === undefined) {
+                                                                const { x, y, z } = sender.location
+                                                                sender.dimension.spawnEntity(sub.spawn, { x: x, y: y, z: z })
+                                                            }
+                                                            else {
+                                                                data.dimension.spawnEntity(sub.spawn, { x: data.location.x, y: data.location.y, z: data.location.z })
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 7) {
+                                                            sender.teleport({ x: sender.location.x, y: sender.location.y + 400, z: sender.location.z })
+                                                        }
+                                                        else if (rule.ruleId.run === 8) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"max":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                world.getDimension(sender.dimension.id).playSound("firework.launch", sender.location, { volume: 1, pitch: 0.5 })
+                                                                let s = system.runInterval(() => {
+                                                                    const molang = new MolangVariableMap()
+                                                                    molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
+                                                                    try {
+                                                                        sender.dimension.spawnParticle("minecraft:lava_particle", sender.location, molang)
+                                                                    } catch (e) {
 
-                                                    }
-                                                }
-                                                else {
-                                                }
-                                            } catch (e) { }
-                                        })
-                                    }
-                                    else {
+                                                                    }
+                                                                })
+                                                                system.runTimeout(() => {
+                                                                    try {
+                                                                        sender.dimension.createExplosion(sender.location, getRandom(sub.min, sub.max), { source: sender, causesFire: sub.fire, allowUnderwater: sub.water })
+                                                                    } catch (e) {
 
+                                                                    }
+                                                                    system.clearRun(s)
+                                                                }, 20)
+                                                                sender.applyKnockback(0, 0, 5, 2 * (sub.speed ?? 1))
+                                                            } catch (e) {
+
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 9) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"time":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            sender.setOnFire(sub.time, sub.effect)
+                                                        }
+                                                        else if (rule.ruleId.run === 10) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"effectId":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            sender.addEffect(sub.effectId, sub.time * 20, { amplifier: sub.level })
+                                                        }
+                                                        else if (rule.ruleId.run === 11) {
+                                                            const { x, y, z } = sender.location
+                                                            if (sender.typeId === "minecraft:player") {
+                                                                if (sender.getDynamicProperty("indying") === false || !sender.getDynamicProperty("indying")) {
+                                                                    sender.setDynamicProperty("indying", true)
+                                                                    sender.inputPermissions.movementEnabled = false
+                                                                    sender.camera.fade({ fadeColor: { red: 1, green: 1, blue: 1 }, fadeTime: { fadeInTime: 3, holdTime: 1.5, fadeOutTime: 1.5 } })
+                                                                    sender.camera.setCamera("minecraft:free", { easeOptions: { easeType: EasingType.InQuart, easeTime: 3 }, facingLocation: { x: x, y: y + 100, z: z }, location: { x: x + 150, y: y + 160, z: z + 150 } })
+                                                                    sender.onScreenDisplay.hideAllExcept()
+                                                                    system.runTimeout(() => {
+                                                                        try {
+                                                                            sender.dimension.spawnParticle(`minecraft:dragon_dying_explosion`, sender.location)
+                                                                            world.getDimension(sender.dimension.id).playSound("random.pop", sender.location, { volume: 1, pitch: 0.5 })
+                                                                            sender.teleport({ x: x, y: y + 100, z: z })
+                                                                        } catch (e) { }
+                                                                    }, 55)
+                                                                    system.runTimeout(() => {
+                                                                        try {
+                                                                            sender.addEffect("invisibility", 100, { amplifier: 255, showParticles: false })
+                                                                            sender.kill()
+                                                                            system.runTimeout(() => {
+                                                                                try {
+                                                                                    sender.onScreenDisplay.resetHudElements()
+                                                                                    sender.camera.clear()
+                                                                                    sender.inputPermissions.movementEnabled = true
+                                                                                    sender.setDynamicProperty("indying", false)
+                                                                                } catch (e) {
+                                                                                }
+                                                                            }, 5)
+                                                                        } catch (e) {
+
+                                                                        }
+                                                                    }, 65)
+                                                                }
+                                                            }
+                                                            else {
+                                                                sender.dimension.spawnParticle(`minecraft:dragon_dying_explosion`, { x: x + 0.5, y: y + 0.5, z: z + 0.5 })
+                                                                world.getDimension(sender.dimension.id).playSound("random.pop", { x: x + 0.5, y: y, z: z + 0.5 }, { volume: 1, pitch: 0.5 })
+                                                                sender.teleport({ x: x, y: y + 100, z: z })
+                                                                sender.addEffect("invisibility", 100, { amplifier: 255, showParticles: false })
+                                                                system.runTimeout(() => {
+                                                                    try {
+                                                                        sender.kill()
+                                                                    } catch (e) {
+
+                                                                    }
+                                                                }, 10)
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 12) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"imax":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                const { x, y, z } = sender.location
+                                                                const inseki = sender.dimension.spawnEntity(`${sub.mob}`, { x: x + getRandom(-80, 80), y: y + getRandom(70, 120), z: z + getRandom(-80, 80) })
+                                                                inseki.nameTag = "隕石"
+                                                                system.runTimeout(() => {
+                                                                    const i = system.runInterval(() => {
+                                                                        if (inseki !== undefined) {
+                                                                            try {
+                                                                                if (inseki.isOnGround) {
+                                                                                    inseki.dimension.createExplosion({ x: inseki.location.x, y: inseki.location.y, z: inseki.location.z }, getRandom(sub.imax, sub.imin, false), { source: inseki, causesFire: sub.fire, allowUnderwater: sub.water })
+                                                                                    inseki.kill()
+                                                                                    system.clearRun(i)
+                                                                                }
+                                                                                else if (inseki.isFalling) {
+                                                                                    inseki.setOnFire(0.1, true)
+                                                                                    inseki.setRotation({ x: sender.getRotation().x + getRandom(-180, 180, true), y: sender.getRotation().y + getRandom(-180, 180, true) })
+                                                                                    inseki.applyImpulse({ x: inseki.getViewDirection().x * Number(sub.x), y: Number(sub.y), z: inseki.getViewDirection().z * Number(-sub.z) })
+                                                                                    const molang = new MolangVariableMap()
+                                                                                    molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
+                                                                                    inseki.dimension.spawnParticle("minecraft:knockback_roar_particle", { x: inseki.location.x, y: inseki.location.y, z: inseki.location.z }, molang)
+                                                                                    inseki.dimension.spawnParticle("crc:inseki", { x: inseki.location.x, y: inseki.location.y, z: inseki.location.z })
+                                                                                    world.getDimension(sender.dimension.id).playSound("random.explode", inseki.location, { pitch: 0.5, volume: 100 })
+                                                                                }
+                                                                                else {
+                                                                                    system.clearRun(i)
+                                                                                }
+                                                                            } catch (e) {
+
+                                                                            }
+                                                                        }
+                                                                        else {
+                                                                            system.clearRun(i)
+                                                                        }
+                                                                    })
+                                                                    system.runTimeout(() => {
+                                                                        system.clearRun(i)
+                                                                    }, 30)
+                                                                }, 2)
+                                                            } catch (e) {
+
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 13) {
+                                                            try {
+                                                                if (sender.typeId !== "minecraft:player") {
+                                                                    let e = true;
+                                                                    if (world.getDynamicProperty("Item") === false) {
+                                                                        if (sender.typeId !== "minecraft:item") {
+                                                                            e = true
+                                                                        }
+                                                                        else {
+                                                                            e = false;
+                                                                        }
+                                                                    }
+                                                                    if (e === true) {
+                                                                        let se = [];
+                                                                        first.subRule.forEach((s) => {
+                                                                            se.push(JSON.stringify(s))
+                                                                        })
+                                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"hmax":`))
+                                                                        let subs2 = []
+                                                                        subs.forEach((tag, i) => {
+                                                                            subs2.push(JSON.parse(tag))
+                                                                        })
+                                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                        sender.applyImpulse({ x: 0, y: getRandom(1, 3.5), z: 0 })
+                                                                        world.getDimension(sender.dimension.id).playSound("firework.launch", sender.location, { volume: 1, pitch: 0.5 })
+                                                                        let a = system.runTimeout(() => {
+                                                                            let s = system.runInterval(() => {
+                                                                                if (sender !== undefined) {
+                                                                                    try {
+                                                                                        const entity = sender.dimension.getEntities({ closest: 1, minDistance: 1, location: sender.location })[0]
+                                                                                        if (entity !== undefined && entity.id !== sender.id) {
+                                                                                            let vec = {
+                                                                                                x: entity.location.x - sender.location.x,
+                                                                                                y: entity.location.y - sender.location.y,
+                                                                                                z: entity.location.z - sender.location.z
+                                                                                            }
+                                                                                            sender.applyImpulse(vec)
+                                                                                            const molang = new MolangVariableMap()
+                                                                                            molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
+                                                                                            sender.dimension.spawnParticle("minecraft:mobflame_single", { x: sender.location.x, y: sender.location.y, z: sender.location.z }, molang)
+                                                                                            sender.dimension.spawnParticle("minecraft:knockback_roar_particle", { x: sender.location.x, y: sender.location.y, z: sender.location.z }, molang)
+                                                                                            const target = sender.dimension.getEntities({ closest: 1, minDistance: 0.5, maxDistance: 2, location: sender.location })[0]
+                                                                                            if (target !== undefined && target.id !== sender.id) {
+                                                                                                system.clearRun(s)
+                                                                                                sender.dimension.createExplosion(sender.location, getRandom(sub.hmax, sub.hmin, false), { source: sender, causesFire: sub.fire, allowUnderwater: sub.water })
+                                                                                                system.runTimeout(() => {
+                                                                                                    system.clearRun(s)
+                                                                                                }, 20)
+                                                                                            }
+                                                                                            system.runTimeout(() => {
+                                                                                                system.clearRun(s)
+                                                                                            }, 100)
+                                                                                        }
+                                                                                        else {
+                                                                                            system.clearRun(s)
+                                                                                        }
+                                                                                    } catch (e) {
+
+                                                                                    }
+                                                                                }
+                                                                                else {
+                                                                                    system.clearRun(s)
+                                                                                }
+                                                                            })
+                                                                        }, 20)
+                                                                        system.runTimeout(() => {
+                                                                            system.clearRun(a)
+                                                                        }, 100)
+                                                                    }
+                                                                }
+                                                            } catch (e) {
+
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 14) {
+                                                            if (!sender.typeId === "minecraft:player") sender.remove()
+                                                        }
+                                                        else if (rule.ruleId.run === 15) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            if (data === undefined) {
+                                                                const { x, y, z } = sender.location
+                                                                const view = sub.view ?? false
+                                                                if (view) {
+                                                                    const dir = sender.getViewDirection()
+                                                                    sender.dimension.setBlockType({ x: Math.floor(x + sub.x + dir.x), y: Math.floor(y + sub.y + dir.y), z: Math.floor(z + sub.z + dir.z) }, `${random3[getRandom(0, random3.length - 1)]}`)
+                                                                }
+                                                                else {
+                                                                    sender.dimension.setBlockType({ x: x + sub.x, y: y + sub.y, z: z + sub.z }, `${random3[getRandom(0, random3.length - 1)]}`)
+                                                                }
+                                                            }
+                                                            else {
+                                                                data.dimension.setBlockType({ x: data.location.x + sub.x, y: data.location.y + sub.y, z: data.location.z + sub.z }, `${random3[getRandom(0, random3.length - 1)]}`)
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 16) {
+                                                            const { x, y, z } = sender.location
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"spawn":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            // if (data === undefined) {
+                                                            if (sender.typeId === "minecraft:player") {
+                                                                if (sender.getDynamicProperty("indying2") === false || !sender.getDynamicProperty("indying2")) {
+                                                                    sender.setDynamicProperty("indying2", true)
+                                                                    sender.camera.fade({ fadeColor: { red: 0, green: 0, blue: 0 }, fadeTime: { fadeInTime: 3, holdTime: 2.5, fadeOutTime: 1.5 } })
+                                                                    sender.camera.setCamera("minecraft:free", { easeOptions: { easeType: EasingType.InQuart, easeTime: 3 }, location: { x: x, y: y, z: z } })
+                                                                    sender.onScreenDisplay.hideAllExcept()
+                                                                    system.runTimeout(() => {
+                                                                        try {
+                                                                            let asa = sender.location
+                                                                            sender.dimension.spawnParticle(`minecraft:huge_explosion_emitter`, sender.location)
+                                                                            world.getDimension(sender.dimension.id).playSound("random.explode", sender.location, { volume: 1, pitch: 0.5 })
+                                                                            sender.teleport({ x: x, y: -64, z: z })
+                                                                            system.runTimeout(() => {
+                                                                                try {
+                                                                                    const entity = sender.dimension.spawnEntity(sub.spawn, asa)
+                                                                                    sender.kill()
+                                                                                    system.runTimeout(() => {
+                                                                                        try {
+                                                                                            sender.onScreenDisplay.resetHudElements()
+                                                                                            sender.camera.clear()
+                                                                                            sender.setDynamicProperty("indying2", false)
+                                                                                        } catch (e) {
+                                                                                        }
+                                                                                    }, 5)
+                                                                                } catch (e) {
+                                                                                }
+                                                                            }, 2)
+                                                                        } catch (e) {
+                                                                        }
+                                                                    }, 60)
+                                                                }
+                                                            }
+                                                            else {
+                                                                sender.dimension.spawnParticle(`minecraft:huge_explosion_emitter`, { x: x, y: y, z: z })
+                                                                world.getDimension(sender.dimension.id).playSound("random.explode", { x: x, y: y, z: z }, { volume: 1, pitch: 0.5 })
+                                                                sender.teleport({ x: x, y: -64, z: z })
+                                                                system.runTimeout(() => {
+                                                                    try {
+                                                                        sender.kill()
+                                                                    } catch (e) {
+
+                                                                    }
+                                                                }, 10)
+                                                                sender.dimension.spawnEntity(sub.spawn, { x: x, y: y, z: z })
+                                                            }
+                                                            // }
+                                                            // else {
+                                                            //     sender.dimension.spawnParticle(`minecraft:huge_explosion_emitter`, { x: data.location.x, y: data.location.y, z: data.location.z })
+                                                            //     world.getDimension(sender.dimension.id).playSound("random.explode", { x: data.location.x, y: data.location.y, z: data.location.z }, { volume: 1, pitch: 0.5 })
+                                                            //     sender.dimension.spawnEntity(sub.spawn, { x: data.location.x + 0.5, y: data.location.y + 0.2, z: data.location.z + 0.5 })
+                                                            // }
+                                                        }
+                                                        else if (rule.ruleId.run === 17) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"command":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            sender.runCommand(`${sub.command}`).catch((r) => { })
+                                                        }
+                                                        else if (rule.ruleId.run === 18) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            if (data !== undefined) {
+                                                                const { x, y, z } = data.location
+                                                                data.dimension.spawnItem(new ItemStack(`${random4[getRandom(0, random4.length - 1)]}`, getRandom(1, 64, true)), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                            }
+                                                            else {
+                                                                const { x, y, z } = sender.location
+                                                                sender.dimension.spawnItem(new ItemStack(`${random4[getRandom(0, random4.length - 1)]}`, getRandom(1, 64, true)), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 19) {
+                                                            sender.setRotation({ x: getRandom(-180, 90, false), y: getRandom(-180, 180, false) })
+                                                        }
+                                                        else if (rule.ruleId.run === 20) {
+                                                            const players = world.getPlayers({ excludeGameModes: ExcludeGameModes }).filter(p => p.name !== sender.name)
+                                                            const target = players[getRandomR(0, players.length - 1, true)]
+                                                            const location = sender.location
+                                                            const tagetLocation = target.location
+                                                            world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
+                                                            sender.teleport(tagetLocation, { dimension: target.dimension, rotation: target.getRotation(), facingLocation: target.getViewDirection() })
+                                                            world.getDimension(target.dimension.id).playSound("mob.endermen.portal", target.location)
+                                                            target.teleport(location, { dimension: sender.dimension, rotation: sender.getRotation(), facingLocation: sender.getViewDirection() })
+                                                        }
+                                                        else if (rule.ruleId.run === 21) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"time":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            if ((world.getTimeOfDay() + sub.time) < 24000) {
+                                                                world.setTimeOfDay(world.getTimeOfDay() + sub.time)
+                                                            }
+                                                            else {
+                                                                const day = (world.getTimeOfDay() + sub.time) - 24000
+                                                                world.setTimeOfDay(day)
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 22) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"time":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            if ((world.getTimeOfDay() - sub.time) > 0) {
+                                                                world.setTimeOfDay(world.getTimeOfDay() - sub.time)
+                                                            }
+                                                            else {
+                                                                const day = (world.getTimeOfDay() - sub.time) + 24000
+                                                                world.setTimeOfDay(day)
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 23) {
+                                                            const spawn = world.getDefaultSpawnLocation()
+                                                            sender.teleport({ x: spawn.x + 0.5, y: world.getDynamicProperty("spawnY"), z: spawn.z + 0.5 })
+                                                        }
+                                                        else if (rule.ruleId.run === 24) {
+                                                            sender.addEffect(random2[getRandom(0, random2.length - 1)], getRandom(1, 300) * 20, { amplifier: getRandom(1, 255) })
+                                                        }
+                                                        else if (rule.ruleId.run === 25) {
+                                                            const { x, y, z } = sender.location
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            if (sender.typeId === "minecraft:player") {
+                                                                world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
+                                                                sender.teleport({ x: sub.x + 0.5, y: sub.y, z: sub.z + 0.5 }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), checkForBlocks: sub.check })
+                                                            }
+                                                            else {
+                                                                world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
+                                                                sender.teleport({ x: sub.x + 0.5, y: sub.y, z: sub.z + 0.5 }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), keepVelocity: sub.keep, checkForBlocks: sub.check })
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 26) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            if (data !== undefined) {
+                                                                const { x, y, z } = data.location
+                                                                data.dimension.spawnItem(new ItemStack(`${sub.item}`, sub.amount), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                            }
+                                                            else {
+                                                                const { x, y, z } = sender.location
+                                                                sender.dimension.spawnItem(new ItemStack(`${sub.item}`, sub.amount), { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 27) {
+                                                            const { x, y, z } = sender.location
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            if (sender.typeId === "minecraft:player") {
+                                                                world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
+                                                                sender.teleport({ x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), checkForBlocks: sub.check })
+                                                            }
+                                                            else {
+                                                                world.getDimension(sender.dimension.id).playSound("mob.endermen.portal", sender.location)
+                                                                sender.teleport({ x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) }, { dimension: DimensionTypes.get(sub.dimensiontype), rotation: sender.getRotation(), facingLocation: sender.getViewDirection(), keepVelocity: sub.keep, checkForBlocks: sub.check })
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 28) {
+                                                            const { x, y, z } = sender.location
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            if (data !== undefined) {
+                                                                if (data.typeId !== "minecraft:player" && typeof data === Entity) {
+                                                                    data.applyImpulse({ x: sub.x, y: sub.y, z: sub.z })
+                                                                }
+                                                            }
+                                                            else {
+                                                                if (sender.typeId !== "minecraft:player") {
+                                                                    sender.applyImpulse({ x: sub.x, y: sub.y, z: sub.z })
+                                                                }
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 29) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"particle":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            const direction = sender.getViewDirection()
+                                                            const loc = {
+                                                                x: sender.location.x + sub.x + direction.x,
+                                                                y: sender.location.y + sub.y + direction.y,
+                                                                z: sender.location.z + sub.z + direction.z
+                                                            }
+                                                            const molang = new MolangVariableMap()
+                                                            molang.setColorRGBA('variable.color', {
+                                                                red: Math.random(),
+                                                                green: Math.random(),
+                                                                blue: Math.random(),
+                                                                alpha: Math.random()
+                                                            });
+                                                            if (sub.visible === false) {
+                                                                sender.spawnParticle(sub.particle, loc, molang)
+                                                            }
+                                                            else {
+                                                                sender.dimension.spawnParticle(sub.particle, loc, molang)
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 30) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            const direction = sender.getViewDirection()
+                                                            const loc = {
+                                                                x: sender.location.x + sub.x + direction.x,
+                                                                y: sender.location.y + sub.y + direction.y,
+                                                                z: sender.location.z + sub.z + direction.z
+                                                            }
+                                                            const molang = new MolangVariableMap()
+                                                            molang.setColorRGBA('variable.color', {
+                                                                red: Math.random(),
+                                                                green: Math.random(),
+                                                                blue: Math.random(),
+                                                                alpha: Math.random()
+                                                            });
+                                                            if (sub.visible === false) {
+                                                                sender.spawnParticle(particles[getRandom(0, particles.length - 1)], loc, molang)
+                                                            }
+                                                            else {
+                                                                sender.dimension.spawnParticle(particles[getRandom(0, particles.length - 1)], loc, molang)
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 31) {
+                                                            if (data === undefined) {
+                                                                const { x, y, z } = sender.location
+                                                                sender.dimension.spawnEntity(random[getRandom(0, random.length - 1)], { x: x, y: y, z: z })
+                                                            }
+                                                            else {
+                                                                data.dimension.spawnEntity(random[getRandom(0, random.length - 1)], { x: data.location.x, y: data.location.y, z: data.location.z })
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 32) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"imax":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                const { x, y, z } = sender.location
+                                                                const inseki = sender.dimension.spawnEntity(`${sub.mob}`, { x: x, y: y + getRandom(10, 30), z: z })
+                                                                inseki.nameTag = "隕石"
+                                                                system.runTimeout(() => {
+                                                                    const i = system.runInterval(() => {
+                                                                        if (inseki !== undefined) {
+                                                                            try {
+                                                                                if (inseki.isOnGround) {
+                                                                                    inseki.dimension.createExplosion({ x: inseki.location.x, y: inseki.location.y, z: inseki.location.z }, getRandom(sub.imax, sub.imin, false), { source: inseki, causesFire: sub.fire, allowUnderwater: sub.water })
+                                                                                    inseki.kill()
+                                                                                    system.clearRun(i)
+                                                                                }
+                                                                                else if (inseki.isFalling) {
+                                                                                    inseki.setOnFire(0.1, true)
+                                                                                    if (sub.irregular) {
+                                                                                        inseki.setRotation({ x: sender.getRotation().x + getRandom(-180, 180, true), y: sender.getRotation().y + getRandom(-180, 180, true) })
+                                                                                    }
+                                                                                    else {
+                                                                                        inseki.setRotation({ x: sender.getRotation().x, y: sender.getRotation().y })
+                                                                                    }
+                                                                                    inseki.applyImpulse({ x: inseki.getViewDirection().x * Number(sub.x), y: Number(sub.y), z: inseki.getViewDirection().z * Number(-sub.z) })
+                                                                                    const molang = new MolangVariableMap()
+                                                                                    molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
+                                                                                    inseki.dimension.spawnParticle("minecraft:knockback_roar_particle", { x: inseki.location.x, y: inseki.location.y, z: inseki.location.z }, molang)
+                                                                                    world.getDimension(sender.dimension.id).playSound("random.explode", inseki.location, { pitch: 2, volume: 50 })
+                                                                                }
+                                                                                else {
+                                                                                    system.clearRun(i)
+                                                                                }
+                                                                            } catch (e) {
+
+                                                                            }
+                                                                        }
+                                                                        else {
+                                                                            system.clearRun(i)
+                                                                        }
+                                                                    })
+                                                                    system.runTimeout(() => {
+                                                                        system.clearRun(i)
+                                                                    }, 30)
+                                                                }, 2)
+                                                            } catch (e) {
+
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 34) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"message":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                if (data === undefined) {
+                                                                    sender.sendMessage(`${sub.message}`)
+                                                                }
+                                                                else {
+                                                                    sender.sendMessage(`[${data.typeId}] ${sub.message}`)
+                                                                }
+                                                            } catch (e) {
+
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 35) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"amount":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                const objs = [
+                                                                    sub.amount,
+                                                                    sub.filter,
+                                                                    sub.time,
+                                                                    sub.and
+                                                                ]
+                                                                if (world.getDynamicProperty("isRandomized") === undefined) {
+                                                                    world.setDynamicProperty("isRandomized", true)
+                                                                    world.getAllPlayers().forEach((p) => {
+                                                                        p.onScreenDisplay.setTitle(`§a三秒後にルールが更新されます！`)
+                                                                        p.playSound("random.orb")
+                                                                    })
+                                                                    system.runTimeout(() => {
+                                                                        world.setDynamicProperty("isRandomized")
+                                                                        if (sub.delete) {
+                                                                            const data = {
+                                                                                rule: [rule],
+                                                                                subRule: [sub]
+                                                                            }
+                                                                            world.setDynamicProperty("CRC:rules", JSON.stringify(data))
+                                                                        }
+                                                                        ruleData(sender, undefined, undefined, true, objs, false, true)
+                                                                        world.getAllPlayers().forEach((p) => {
+                                                                            p.onScreenDisplay.setTitle(`§eルールが更新されました！`)
+                                                                            p.playSound("random.levelup")
+                                                                        })
+                                                                    }, 3 * 20)
+                                                                }
+                                                            } catch (e) {
+
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 36) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"amount":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                if (world.getDynamicProperty("isRandomized2") === undefined) {
+                                                                    world.setDynamicProperty("isRandomized2", true)
+                                                                    world.getAllPlayers().forEach((p) => {
+                                                                        p.onScreenDisplay.setTitle(`§c三秒後にルールが更新されます！`)
+                                                                        p.playSound("random.orb")
+                                                                    })
+                                                                    let srules = []
+                                                                    system.runTimeout(() => {
+                                                                        world.setDynamicProperty("isRandomized2")
+                                                                        if (sub.amount.length) {
+                                                                            for (let a = 0; a < sub.amount; a++) {
+                                                                                if (first.rule.length > 0) {
+                                                                                    const r = first.rule.length === 2 ? getRandom(0, 2) : getRandom(0, first.rule.length - 1)
+                                                                                    if (first.rule[r].id === rule.id) {
+                                                                                    }
+                                                                                    else {
+                                                                                        const pars = first.rule[r]
+                                                                                        if (rule2[pars.run].ruleId !== 35) {
+                                                                                            srules.push(`§c- もし${DataRule[pars.if + 1].displayName}かつ${ands.concat(s)[pars.and]}なら${rule2[pars.run].displayName}`)
+                                                                                            const subr = findSubData(pars)
+                                                                                            if (subr !== undefined) {
+                                                                                                const maindatas = JSON.parse(world.getDynamicProperty("CRC:rules")).rule
+                                                                                                const subdatas = JSON.parse(world.getDynamicProperty("CRC:rules")).subRule
+                                                                                                const i = getIndex(subdatas, subr.subRule)
+                                                                                                subdatas.splice(i, 1)
+                                                                                                maindatas.splice(r, 1)
+                                                                                                const resultData = {
+                                                                                                    rule: maindatas,
+                                                                                                    subRule: subdatas
+                                                                                                }
+                                                                                                world.setDynamicProperty("CRC:rules", JSON.stringify(resultData))
+                                                                                            }
+                                                                                            else {
+                                                                                                const maindatas = JSON.parse(world.getDynamicProperty("CRC:rules")).rule
+                                                                                                const subdatas = JSON.parse(world.getDynamicProperty("CRC:rules")).subRule
+                                                                                                maindatas.splice(r, 1)
+                                                                                                const resultData = {
+                                                                                                    rule: maindatas,
+                                                                                                    subRule: subdatas
+                                                                                                }
+                                                                                                world.setDynamicProperty("CRC:rules", JSON.stringify(resultData))
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        if (sub.view) {
+                                                                            if (srules.length > 0) {
+                                                                                sender.sendMessage(`§c削除されたルール: \n${srules.join("\n")}`)
+                                                                            }
+                                                                            else {
+                                                                                sender.sendMessage(`§c削除されたルール: 無し`)
+                                                                            }
+                                                                        }
+                                                                        world.getAllPlayers().forEach((p) => {
+                                                                            p.onScreenDisplay.setTitle(`§eルールが更新されました！`)
+                                                                            p.playSound("random.levelup")
+                                                                        })
+                                                                    }, 3 * 20)
+                                                                }
+                                                            } catch (e) {
+
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 37) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"name":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                sender.nameTag = sub.name.replace(/\\n/g, "\n")
+                                                            } catch (e) {
+
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 39) {
+                                                            try {
+                                                                const players = world.getPlayers({ excludeGameModes: ExcludeGameModes }).filter(p => p.name !== sender.name)
+                                                                const target = players[getRandomR(0, players.length - 1, true)]
+                                                                const inventory = sender.getComponent("inventory").container
+                                                                const armor = sender.getComponent("equippable")
+                                                                const targetInventory = target.getComponent("inventory").container
+                                                                const targetArmor = target.getComponent("equippable")
+                                                                const armorSlot = {
+                                                                    head: armor.getEquipment(EquipmentSlot.Head),
+                                                                    chest: armor.getEquipment(EquipmentSlot.Chest),
+                                                                    legs: armor.getEquipment(EquipmentSlot.Legs),
+                                                                    feet: armor.getEquipment(EquipmentSlot.Feet),
+                                                                    offHand: armor.getEquipment(EquipmentSlot.Offhand),
+                                                                }
+                                                                const targetArmorSlot = {
+                                                                    head: targetArmor.getEquipment(EquipmentSlot.Head),
+                                                                    chest: targetArmor.getEquipment(EquipmentSlot.Chest),
+                                                                    legs: targetArmor.getEquipment(EquipmentSlot.Legs),
+                                                                    feet: targetArmor.getEquipment(EquipmentSlot.Feet),
+                                                                    offHand: targetArmor.getEquipment(EquipmentSlot.Offhand),
+                                                                }
+                                                                for (let i = 0; i < inventory.size; i++) {
+                                                                    inventory.swapItems(i, i, targetInventory)
+                                                                }
+                                                                armor.setEquipment(EquipmentSlot.Head, targetArmorSlot.head)
+                                                                armor.setEquipment(EquipmentSlot.Chest, targetArmorSlot.chest)
+                                                                armor.setEquipment(EquipmentSlot.Legs, targetArmorSlot.legs)
+                                                                armor.setEquipment(EquipmentSlot.Feet, targetArmorSlot.feet)
+                                                                armor.setEquipment(EquipmentSlot.Offhand, targetArmorSlot.offHand)
+
+                                                                targetArmor.setEquipment(EquipmentSlot.Head, armorSlot.head)
+                                                                targetArmor.setEquipment(EquipmentSlot.Chest, armorSlot.chest)
+                                                                targetArmor.setEquipment(EquipmentSlot.Legs, armorSlot.legs)
+                                                                targetArmor.setEquipment(EquipmentSlot.Feet, armorSlot.feet)
+                                                                targetArmor.setEquipment(EquipmentSlot.Offhand, armorSlot.offHand)
+                                                            } catch (e) {
+
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 40) {
+                                                            try {
+                                                                const players = world.getPlayers({ excludeGameModes: ExcludeGameModes }).filter(p => p.name !== sender.name)
+                                                                const target = players[getRandomR(0, players.length - 1, true)]
+                                                                const viewblock = sender.getBlockFromViewDirection().block ?? undefined
+                                                                const targetViewblock = target.getBlockFromViewDirection().block ?? undefined
+                                                                if (viewblock !== undefined && targetViewblock !== undefined) {
+                                                                    const tp = targetViewblock.permutation
+                                                                    const p = viewblock.permutation
+                                                                    viewblock.setPermutation(tp)
+                                                                    targetViewblock.setPermutation(p)
+                                                                }
+                                                                else if (viewblock === undefined && targetViewblock !== undefined) {
+                                                                    targetViewblock.setType("minecraft:air")
+                                                                }
+                                                                else {
+                                                                    viewblock.setType("minecraft:air")
+                                                                }
+                                                            } catch (e) {
+
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 42) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"entity":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                const { x, y, z } = sender.getViewDirection()
+                                                                const entity = sender.dimension.spawnEntity(sub.entity, { x: sender.location.x + x, y: sender.location.y + y + 1, z: sender.location.z + z });
+                                                                if (entity.hasComponent(EntityComponentTypes.Projectile)) {
+                                                                    const projectileComp = entity.getComponent(EntityComponentTypes.Projectile);
+                                                                    projectileComp.owner = sender;
+                                                                    projectileComp.gravity = sub.gravity
+                                                                    if (sub.random) projectileComp.shoot({ x: getRandom(-1, 1) * sub.velocityX, y: getRandom(-1, 1) * sub.velocityY, z: getRandom(-1, 1) * sub.velocityZ }, { uncertainty: sub.uncertainty })
+                                                                    else projectileComp.shoot({ x: x * sub.velocityX, y: y * sub.velocityY, z: z * sub.velocityZ }, { uncertainty: sub.uncertainty })
+                                                                    if (sub.explode) {
+                                                                        let a = system.runInterval(() => {
+                                                                            try {
+                                                                                if (entity.isOnGround) {
+                                                                                    system.clearRun(a)
+                                                                                    entity.dimension.createExplosion(entity.location, getRandom(sub.min, sub.max), { source: entity, causesFire: sub.fire, allowUnderwater: sub.water })
+                                                                                }
+                                                                                else return;
+                                                                            } catch (e) {
+                                                                                system.clearRun(a)
+                                                                            }
+                                                                        })
+                                                                    }
+                                                                }
+                                                                else {
+                                                                    if (sub.random) entity.applyImpulse({ x: getRandom(-1, 1) * sub.velocityX, y: getRandom(-1, 1) * sub.velocityY, z: getRandom(-1, 1) * sub.velocityZ })
+                                                                    else entity.applyImpulse({ x: x * sub.velocityX, y: y * sub.velocityY, z: z * sub.velocityZ })
+                                                                    if (sub.explode) {
+                                                                        let a = system.runInterval(() => {
+                                                                            try {
+                                                                                if (entity.isOnGround) {
+                                                                                    system.clearRun(a)
+                                                                                    entity.dimension.createExplosion(entity.location, getRandom(sub.min, sub.max), { source: entity, causesFire: sub.fire, allowUnderwater: sub.water })
+                                                                                }
+                                                                                else return;
+                                                                            } catch (e) {
+                                                                                system.clearRun(a)
+                                                                            }
+                                                                        })
+                                                                    }
+                                                                }
+                                                            } catch (e) {
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 43) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"entity":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                const { x, y, z } = sender.getViewDirection()
+                                                                const entity = sender.dimension.spawnEntity(sub.entity, { x: sender.location.x + x, y: sender.location.y + y + 1, z: sender.location.z + z });
+                                                                if (entity.hasComponent(EntityComponentTypes.Rideable)) {
+                                                                    const rider = entity.getComponent(EntityComponentTypes.Rideable)
+                                                                    if (sub.rideEntity === "minecraft:player") {
+                                                                        rider.addRider(sender)
+                                                                    }
+                                                                    else {
+                                                                        let rides = []
+                                                                        for (let i = 0; i < sub.count; i++) {
+                                                                            const ridere = entity.dimension.spawnEntity(sub.rideEntity, { x: entity.location.x, y: entity.location.y + i, z: entity.location.z });
+                                                                            rides.push(ridere)
+                                                                            if (sub.isRideEntity) {
+                                                                                if (i === 0) {
+                                                                                    rider.addRider(ridere)
+                                                                                }
+                                                                                else {
+                                                                                    if (rides[i - 1].hasComponent(EntityComponentTypes.Rideable)) {
+                                                                                        const eidn = rides[i - 1].getComponent(EntityComponentTypes.Rideable)
+                                                                                        eidn.addRider(ridere)
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                            else rider.addRider(ridere)
+                                                                        }
+                                                                    }
+                                                                }
+                                                            } catch (e) {
+                                                                console.warn(e)
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 44) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                if (data !== undefined) {
+                                                                    const { x, y, z } = data.location
+                                                                    if (!sub.isRule) data.dimension.placeFeature(`${sub.place}`, { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                                    else data.dimension.placeFeatureRule(`${sub.place}`, { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                                }
+                                                                else {
+                                                                    const { x, y, z } = sender.location
+                                                                    if (!sub.isRule) sender.dimension.placeFeature(`${sub.place}`, { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                                    else sender.dimension.placeFeatureRule(`${sub.place}`, { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) })
+                                                                }
+                                                            } catch (e) {
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 45) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                const { x, y } = sender.inputInfo.getMovementVector()
+                                                                sender.applyKnockback({ x: -y * sub.x, z: x * sub.z }, 1 * sub.y)
+                                                            } catch (e) {
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === 47) {
+                                                            try {
+                                                                let se = [];
+                                                                first.subRule.forEach((s) => {
+                                                                    se.push(JSON.stringify(s))
+                                                                })
+                                                                const subs = se.filter((tag, i) => tag.startsWith(`{"x":`))
+                                                                let subs2 = []
+                                                                subs.forEach((tag, i) => {
+                                                                    subs2.push(JSON.parse(tag))
+                                                                })
+                                                                const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                const s = world.structureManager.getWorldStructureIds()
+                                                                const r = getRandom(0, s.length - 1, true)
+                                                                const str = s[r]
+                                                                const stea = [
+                                                                    StructureRotation.None,
+                                                                    StructureRotation.Rotate180,
+                                                                    StructureRotation.Rotate270,
+                                                                    StructureRotation.Rotate90
+                                                                ]
+                                                                if (data !== undefined) {
+                                                                    const { x, y, z } = data.location
+                                                                    world.structureManager.place(`${str}`, data.dimension, { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) }, { waterlogged: true, rotation: stea[getRandom(0, stea.length - 1, true)], integrity: getRandom(sub.random, 1, false), animationMode: sub.animation, animationSeconds: sub.sec })
+                                                                }
+                                                                else {
+                                                                    const { x, y, z } = sender.location
+                                                                    world.structureManager.place(`${str}`, sender.dimension, { x: x + getRandom(-sub.x, sub.x), y: y + sub.y, z: z + getRandom(-sub.z, sub.z) }, { waterlogged: true, rotation: stea[getRandom(0, stea.length - 1, true)], integrity: getRandom(sub.random, 1, false), animationMode: sub.animation, animationSeconds: sub.sec })
+                                                                }
+                                                            } catch (e) {
+                                                            }
+                                                        }
+                                                        else if (rule.ruleId.run === -1) {
+                                                            let se = [];
+                                                            first.subRule.forEach((s) => {
+                                                                se.push(JSON.stringify(s))
+                                                            })
+                                                            const subs = se.filter((tag, i) => tag.startsWith(`{"script":`))
+                                                            let subs2 = []
+                                                            subs.forEach((tag, i) => {
+                                                                subs2.push(JSON.parse(tag))
+                                                            })
+                                                            const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                            try {
+                                                                eval(`${sub.script}`)
+                                                            } catch (e) {
+                                                                if (sub.error) {
+                                                                    sender.sendMessage(`§b[Custom Rule Creator Development mode Error] ${e}`)
+                                                                }
+                                                            }
+                                                        }
+                                                        else {
+                                                            // try {
+                                                            //     if (enableExpansionPack) {
+                                                            //         system_pack[getLastRuleId().index - rule.ruleId.run - 1].runAction(sender, rule)
+                                                            //     }
+                                                            // } catch (e) {
+                                                            //     world.sendMessage(`§c[Custom Rule Creator Pack Error] ${e}`)
+                                                            // }
+                                                        }
+                                                    }
+                                                    else return;
+                                                } catch (e) { }
+                                            })
+                                        }
+                                        else return;
                                     }
+                                } catch (e) {
+
                                 }
-                            } catch (e) {
-
-                            }
-                        }))
+                            }))
+                        }
+                        else {
+                            const entity = world.getDimension(sender.dimension.id).getEntities({ location: sender.location, minDistance: 1, maxDistance: 200 }).filter(e => e.typeId !== "minecraft:player")
+                            system.run(() => {
+                                try {
+                                    entity[getRandom(0, entity.length - 1, true)].remove();
+                                } catch (e) { }
+                            })
+                        }
                     }
-                    else {
-                        const entity = world.getDimension(sender.dimension.id).getEntities({ location: sender.location, minDistance: 1, maxDistance: 200 }).filter(e => e.typeId !== "minecraft:player")
-                        system.run(() => {
-                            try {
-                                entity[getRandom(0, entity.length - 1, true)].remove();
-                            } catch (e) { }
-                        })
-                    }
+                    else return;
                 }
+                else return;
             }
             catch (e) { }
         }
+        else return;
     }
+    else return;
 }
 export function IsCancelEvent(sender = Player.prototype, first = Object, index) {
     if (first !== undefined) {
@@ -2440,6 +3432,16 @@ function getRandom(min = 0, max = 5, floor = true) {
         return random;
     }
 }
+function getRandomR(min = 0, max = 5, round = true) {
+    if (round) {
+        let random = Math.round(Math.random() * min + Math.random() * max)
+        return random;
+    }
+    else {
+        let random = Math.random() * min + Math.random() * max
+        return random;
+    }
+}
 function getRandomBool() {
     let random = Math.floor(Math.random() * 0 + Math.random() * 2)
     let bool = false;
@@ -2460,6 +3462,7 @@ function password(length = 10) {
     return password;
 }
 system.beforeEvents.watchdogTerminate.subscribe(data => {
+    world.setDynamicProperty("shutdown", true)
     if (EmergencySystemControl) {
         world.setDynamicProperty("Stop", true)
         world.sendMessage(`§l§c[${AddonName} ${Version}] 処理が非常に遅延しているのを検知したため、アドオンが緊急で停止しました。`)
@@ -2471,6 +3474,13 @@ system.beforeEvents.watchdogTerminate.subscribe(data => {
         } catch (e) { }
     }
     data.cancel = true
+})
+system.beforeEvents.shutdown.subscribe((data) => {
+    if (world.getDynamicProperty("shutdown") === true) {
+        world.setDynamicProperty("Crash", true)
+        world.setDynamicProperty("Stop", true)
+        world.setDynamicProperty("shutdown")
+    }
 })
 function createSaveDataCodeId() {
 
@@ -2573,13 +3583,22 @@ export function GetRulesRawData() {
 * @param {Boolean} randomize ランダマイズ化
 * @param {Object} CallData 参照用オブジェクトデータ
 */
-export function ruleData(sender, runData, ruleData, randomize = false, CallData = undefined) {
+export function ruleData(sender, runData, ruleData, randomize = false, CallData = undefined, message = true, ruleView = false, subData = undefined, index = 0) {
+    const random = EntityTypes.getAll().map((b) => b.id)
+    const random2 = EffectTypes.getAll().map((b) => b.getName()).sort()
+    const random3 = BlockTypes.getAll().map((b) => b.id)
+    const random4 = ItemTypes.getAll().map((b) => b.id)
+    const animate = [
+        StructureAnimationMode.None,
+        StructureAnimationMode.Blocks,
+        StructureAnimationMode.Layers
+    ]
     if (randomize === false && CallData === undefined) {
         if (runData.displayName === "重力を加える") {
             let ui = new ModalFormData()
             ui.title("重力の設定")
-            ui.textField("§cx座標(数字記入)", "Num")
-            ui.textField("§ew座標(数字記入)", "Num")
+            ui.textField("§cx座標(数字記入)", "Num", subData === undefined ? "" : `${subData.x}`)
+            ui.textField("§ew座標(数字記入)", "Num", subData === undefined ? "" : `${subData.w}`)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1])) {
@@ -2588,6 +3607,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         w: formValues[1],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -2598,11 +3618,11 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ブロックを設置") {
             let ui = new ModalFormData()
             ui.title("ブロックの設定")
-            ui.textField("ブロック名", "stone")
-            ui.textField("オフセット\n§cX", "数値", "0")
-            ui.textField("§aY", "数値", "-1")
-            ui.textField("§9Z", "数値", "0")
-            ui.toggle("視点の先にブロックを設置する", true)
+            ui.textField("ブロック名", "stone", subData === undefined ? "" : subData.block)
+            ui.textField("オフセット\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
+            ui.textField("§aY", "数値", subData === undefined ? "-1" : `${subData.y}`)
+            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
+            ui.toggle("視点の先にブロックを設置する", subData === undefined ? "" : subData.view)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[1]) && !isNaN(formValues[2]) && !isNaN(formValues[3])) {
@@ -2614,6 +3634,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         view: formValues[4],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -2624,9 +3645,9 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ダメージを与える") {
             let ui = new ModalFormData()
             ui.title("ダメージ量設定")
-            ui.slider("ダメージ量", 0, 40, 1)
-            ui.dropdown("ケース", cause, 24)
-            ui.textField("タイプ", "minecraft:zombie", "minecraft:")
+            ui.slider("ダメージ量", 0, 40, 1, subData === undefined ? 0 : subData.damage)
+            ui.dropdown("ケース", cause, 24, subData === undefined ? 0 : subData.causes)
+            ui.textField("タイプ", "minecraft:zombie", subData === undefined ? "minecraft:" : subData.entitytype)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (formValues[2] !== undefined && formValues[2] !== "") {
@@ -2637,6 +3658,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                             entitytype: formValues[2],
                             id: ruleData.id
                         }
+                        if (subData !== undefined) removeData(ruleData, index)
                         set(sender, ruleData, rule2)
                     }
                     else {
@@ -2651,7 +3673,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "エンティティをスポーン") {
             let ui = new ModalFormData()
             ui.title("スポーンさせるエンティティ")
-            ui.textField("エンティティID", "minecraft:zombie", "minecraft:")
+            ui.textField("エンティティID", "minecraft:zombie", subData === undefined ? "minecraft:" : subData.spawn)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (isNaN(formValues[0])) {
@@ -2659,6 +3681,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         spawn: formValues[0],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -2669,8 +3692,8 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "炎上させる") {
             let ui = new ModalFormData()
             ui.title("炎上設定")
-            ui.slider("継続時間", 1, 300, 1, 30)
-            ui.toggle("エフェクト", false)
+            ui.slider("継続時間", 1, 300, 1, subData === undefined ? 30 : subData.time)
+            ui.toggle("エフェクト", subData === undefined ? false : subData.effect)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -2678,15 +3701,16 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                     effect: formValues[1],
                     id: ruleData.id
                 }
+                if (subData !== undefined) removeData(ruleData, index)
                 set(sender, ruleData, rule2)
             })
         }
         else if (runData.displayName === "エフェクトを付与する") {
             let ui = new ModalFormData()
             ui.title("付与するエフェクト")
-            ui.dropdown("エフェクトID", random2)
-            ui.slider("継続時間", 1, 300, 1, 30)
-            ui.slider("レベル", 1, 255, 1)
+            ui.dropdown("エフェクトID", random2, subData === undefined ? 0 : subData.effectId)
+            ui.slider("継続時間", 1, 300, 1, subData === undefined ? 30 : subData.time)
+            ui.slider("レベル", 1, 255, 1, subData === undefined ? 1 : subData.level)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -2695,16 +3719,17 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                     level: formValues[2],
                     id: ruleData.id
                 }
+                if (subData !== undefined) removeData(ruleData, index)
                 set(sender, ruleData, rule2)
             })
         }
         else if (runData.displayName === "爆発") {
             let ui = new ModalFormData()
             ui.title("爆発の設定")
-            ui.slider("最小威力", 0, 200, 1)
-            ui.slider("最大威力", 0, 200, 1)
-            ui.toggle("火力", false)
-            ui.toggle("水の貫通", false)
+            ui.slider("最大威力", 0, 200, 1, subData === undefined ? 0 : subData.max)
+            ui.slider("最小威力", 0, 200, 1, subData === undefined ? 0 : subData.min)
+            ui.toggle("火力", subData === undefined ? false : subData.fire)
+            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -2714,17 +3739,18 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                     water: formValues[3],
                     id: ruleData.id
                 }
+                if (subData !== undefined) removeData(ruleData, index)
                 set(sender, ruleData, rule2)
             })
         }
         else if (runData.displayName === "打ち上げる") {
             let ui = new ModalFormData()
             ui.title("打ち上げた時の爆発の設定")
-            ui.slider("最小威力", 0, 200, 1)
-            ui.slider("最大威力", 0, 200, 1)
-            ui.textField("上昇速度率", "1.0", "1.0")
-            ui.toggle("火力", false)
-            ui.toggle("水の貫通", false)
+            ui.slider("最大威力", 0, 200, 1, subData === undefined ? 0 : subData.max)
+            ui.slider("最小威力", 0, 200, 1, subData === undefined ? 0 : subData.min)
+            ui.textField("上昇速度率", "1.0", subData === undefined ? "1.0" : subData.speed)
+            ui.toggle("火力", subData === undefined ? false : subData.fire)
+            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[2])) {
@@ -2736,6 +3762,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         water: formValues[4],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -2746,14 +3773,14 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "隕石を降らす") {
             let ui = new ModalFormData()
             ui.title("隕石の設定")
-            ui.slider("最小威力", 0, 200, 1)
-            ui.slider("最大威力", 0, 200, 1)
-            ui.toggle("火力", false)
-            ui.toggle("水の貫通", false)
-            ui.textField("隕石となるエンティティ", "minecraft:", "minecraft:")
-            ui.textField("速度(x)", "数値", "1")
-            ui.textField("速度(y)", "数値", "-0.5")
-            ui.textField("速度(z)", "数値", "1")
+            ui.slider("最大威力", 0, 200, 1, subData === undefined ? 0 : subData.imax)
+            ui.slider("最小威力", 0, 200, 1, subData === undefined ? 0 : subData.imin)
+            ui.toggle("火力", subData === undefined ? false : subData.fire)
+            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
+            ui.textField("隕石となるエンティティ", "minecraft:", subData === undefined ? "minecraft:" : subData.mob)
+            ui.textField("速度(x)", "数値", subData === undefined ? "1" : `${subData.x}`)
+            ui.textField("速度(y)", "数値", subData === undefined ? "-0.5" : `${subData.y}`)
+            ui.textField("速度(z)", "数値", subData === undefined ? "1" : `${subData.z}`)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[5]) && !isNaN(formValues[6]) && !isNaN(formValues[7])) {
@@ -2768,6 +3795,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         z: formValues[7],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -2778,10 +3806,10 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ホーミングさせる(プレイヤー以外)") {
             let ui = new ModalFormData()
             ui.title("ホーミングの設定")
-            ui.slider("衝突時の最小威力", 0, 200, 1)
-            ui.slider("衝突時の最大威力", 0, 200, 1)
-            ui.toggle("火力", false)
-            ui.toggle("水の貫通", false)
+            ui.slider("衝突時の最大威力", 0, 200, 1, subData === undefined ? 0 : subData.hmax)
+            ui.slider("衝突時の最小威力", 0, 200, 1, subData === undefined ? 0 : subData.hmin)
+            ui.toggle("火力", subData === undefined ? false : subData.fire)
+            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -2791,16 +3819,17 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                     water: formValues[3],
                     id: ruleData.id
                 }
+                if (subData !== undefined) removeData(ruleData, index)
                 set(sender, ruleData, rule2)
             })
         }
         else if (runData.displayName === "ランダムなブロックを設置") {
             let ui = new ModalFormData()
             ui.title("ブロックの設定")
-            ui.textField("オフセット\n§cX", "数値", "0")
-            ui.textField("§aY", "数値", "-1")
-            ui.textField("§9Z", "数値", "0")
-            ui.toggle("視点の先にブロックを設置する", true)
+            ui.textField("オフセット\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
+            ui.textField("§aY", "数値", subData === undefined ? "-1" : `${subData.y}`)
+            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
+            ui.toggle("視点の先にブロックを設置する", subData === undefined ? true : subData.view)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -2811,6 +3840,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         view: formValues[3],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -2821,7 +3851,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "エンティティを置き換える") {
             let ui = new ModalFormData()
             ui.title("置き換えるエンティティ")
-            ui.textField("エンティティID", "minecraft:zombie", "minecraft:")
+            ui.textField("エンティティID", "minecraft:zombie", subData === undefined ? "minecraft:" : subData.spawn)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (isNaN(formValues[0])) {
@@ -2829,6 +3859,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         spawn: formValues[0],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -2839,7 +3870,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "コマンドを実行する") {
             let ui = new ModalFormData()
             ui.title("実行するコマンド")
-            ui.textField("コマンドの構文", "summon zombie ~~~", "")
+            ui.textField("コマンドの構文", "summon zombie ~~~", subData === undefined ? "" : subData.command)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (formValues[0] !== undefined) {
@@ -2847,6 +3878,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         command: formValues[0],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -2857,9 +3889,9 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ランダムなアイテムをスポーンさせる") {
             let ui = new ModalFormData()
             ui.title("ランダムなアイテムのスポーン設定")
-            ui.textField("オフセット(範囲)\n§cX", "数値", "0")
-            ui.textField("§aY", "数値", "80")
-            ui.textField("§9Z", "数値", "0")
+            ui.textField("オフセット(範囲)\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
+            ui.textField("§aY", "数値", subData === undefined ? "80" : `${subData.y}`)
+            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -2869,6 +3901,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         z: Number(formValues[2]),
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -2879,38 +3912,40 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "時間を早送りにする") {
             let ui = new ModalFormData()
             ui.title("時間の設定")
-            ui.slider("時間のスピード", 1, 2000, 1)
+            ui.slider("時間のスピード", 1, 2000, 1, subData === undefined ? 0 : subData.time)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
                     time: formValues[0],
                     id: ruleData.id
                 }
+                if (subData !== undefined) removeData(ruleData, index)
                 set(sender, ruleData, rule2)
             })
         }
         else if (runData.displayName === "時間を巻き戻しにする") {
             let ui = new ModalFormData()
             ui.title("時間の設定")
-            ui.slider("時間のスピード", 1, 2000, 1)
+            ui.slider("時間のスピード", 1, 2000, 1, subData === undefined ? 0 : subData.time)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
                     time: formValues[0],
                     id: ruleData.id
                 }
+                if (subData !== undefined) removeData(ruleData, index)
                 set(sender, ruleData, rule2)
             })
         }
         else if (runData.displayName === "テレポートする") {
             let ui = new ModalFormData()
             ui.title("テレポートの設定")
-            ui.textField("座標\n§cX", "数値", "0")
-            ui.textField("§aY", "数値", "0")
-            ui.textField("§9Z", "数値", "0")
-            ui.dropdown("ディメンション", DimensionTypes.getAll().map(d => d.typeId), 1)
-            ui.toggle("速度の保持", false)
-            ui.toggle("テレポート先にブロックがあるか確認", false)
+            ui.textField("座標\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
+            ui.textField("§aY", "数値", subData === undefined ? "0" : `${subData.y}`)
+            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
+            ui.dropdown("ディメンション", DimensionTypes.getAll().map(d => d.typeId), subData === undefined ? 1 : subData.dimensiontype)
+            ui.toggle("速度の保持", subData === undefined ? false : subData.keep)
+            ui.toggle("テレポート先にブロックがあるか確認", subData === undefined ? false : subData.check)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -2923,6 +3958,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         check: formValues[5],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -2933,15 +3969,15 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "アイテムをスポーンさせる") {
             let ui = new ModalFormData()
             ui.title("アイテムのスポーン設定")
-            ui.textField("オフセット(範囲)\n§cX", "数値", "0")
-            ui.textField("§aY", "数値", "80")
-            ui.textField("§9Z", "数値", "0")
-            ui.textField("アイテム名", "minecraft:diamond")
-            ui.slider("個数", 1, 64, 1)
+            ui.textField("オフセット(範囲)\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
+            ui.textField("§aY", "数値", "80", subData === undefined ? "80" : `${subData.y}`)
+            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
+            ui.textField("アイテム名", "minecraft:diamond", subData === undefined ? "" : subData.item)
+            ui.slider("個数", 1, 64, 1, subData === undefined ? 0 : subData.amount)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
-                    if (formValues[4] !== undefined) {
+                    if (formValues[3] !== undefined) {
                         let rule2 = {
                             x: Number(formValues[0]),
                             y: Number(formValues[1]),
@@ -2950,6 +3986,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                             amount: formValues[4],
                             id: ruleData.id
                         }
+                        if (subData !== undefined) removeData(ruleData, index)
                         set(sender, ruleData, rule2)
                     }
                     else {
@@ -2964,12 +4001,12 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ランダムな範囲でテレポートする") {
             let ui = new ModalFormData()
             ui.title("テレポートの設定")
-            ui.textField("座標(範囲)\n§cX", "数値", "20")
-            ui.textField("§aY", "数値", "0")
-            ui.textField("§9Z", "数値", "20")
-            ui.dropdown("ディメンション", DimensionTypes.getAll().map(d => d.typeId), 1)
-            ui.toggle("速度の保持", false)
-            ui.toggle("テレポート先にブロックがあるか確認", false)
+            ui.textField("座標(範囲)\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
+            ui.textField("§aY", "数値", subData === undefined ? "20" : `${subData.y}`)
+            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
+            ui.dropdown("ディメンション", DimensionTypes.getAll().map(d => d.typeId), subData === undefined ? 1 : subData.dimensiontype)
+            ui.toggle("速度の保持", subData === undefined ? false : subData.keep)
+            ui.toggle("テレポート先にブロックがあるか確認", subData === undefined ? false : subData.check)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -2982,6 +4019,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         check: formValues[5],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -2992,9 +4030,9 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "速度を加える(プレイヤー以外)") {
             let ui = new ModalFormData()
             ui.title("速度の設定")
-            ui.textField("§cx座標(数字記入)", "Num")
-            ui.textField("§ey座標(数字記入)", "Num")
-            ui.textField("§9z座標(数字記入)", "Num")
+            ui.textField("§cx座標(数字記入)", "Num", subData === undefined ? "" : `${subData.x}`)
+            ui.textField("§ey座標(数字記入)", "Num", subData === undefined ? "" : `${subData.y}`)
+            ui.textField("§9z座標(数字記入)", "Num", subData === undefined ? "" : `${subData.z}`)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -3004,6 +4042,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         z: Number(formValues[2]),
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -3014,11 +4053,11 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "パーティクルを表示する") {
             let ui = new ModalFormData()
             ui.title("パーティクルの設定")
-            ui.textField("パーティクル名", "minecraft:")
-            ui.textField("表示する相対座標\n§cX", "数値", "0")
-            ui.textField("§aY", "数値", "0")
-            ui.textField("§9Z", "数値", "0")
-            ui.toggle("全員に表示する", true)
+            ui.textField("パーティクル名", "minecraft:", subData === undefined ? "" : subData.particle)
+            ui.textField("表示する相対座標\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
+            ui.textField("§aY", "数値", subData === undefined ? "0" : `${subData.y}`)
+            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
+            ui.toggle("全員に表示する", subData === undefined ? true : subData.visible)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (formValues[0] !== undefined) {
@@ -3031,6 +4070,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                             visible: formValues[4],
                             id: ruleData.id
                         }
+                        if (subData !== undefined) removeData(ruleData, index)
                         set(sender, ruleData, rule2)
                     }
                     else {
@@ -3045,10 +4085,10 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ランダムなパーティクルを表示する") {
             let ui = new ModalFormData()
             ui.title("ランダムなパーティクルの設定")
-            ui.textField("表示する相対座標\n§cX", "数値", "0")
-            ui.textField("§aY", "数値", "0")
-            ui.textField("§9Z", "数値", "0")
-            ui.toggle("全員に表示する", true)
+            ui.textField("表示する相対座標\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
+            ui.textField("§aY", "数値", subData === undefined ? "0" : `${subData.y}`)
+            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
+            ui.toggle("全員に表示する", subData === undefined ? true : subData.visible)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -3059,6 +4099,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         visible: formValues[3],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -3069,15 +4110,15 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "エンティティをミサイルにする") {
             let ui = new ModalFormData()
             ui.title("エンティティミサイルの設定")
-            ui.slider("最小威力", 0, 200, 1)
-            ui.slider("最大威力", 0, 200, 1)
-            ui.toggle("火力", false)
-            ui.toggle("水の貫通", false)
-            ui.toggle("不規則な軌道", false)
-            ui.textField("ミサイルとなるエンティティ", "minecraft:", "minecraft:")
-            ui.textField("速度(x)", "数値", "1")
-            ui.textField("速度(y)", "数値", "-0.5")
-            ui.textField("速度(z)", "数値", "1")
+            ui.slider("最大威力", 0, 200, 1, subData === undefined ? 0 : subData.imax)
+            ui.slider("最小威力", 0, 200, 1, subData === undefined ? 0 : subData.imin)
+            ui.toggle("火力", subData === undefined ? false : subData.fire)
+            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
+            ui.toggle("不規則な軌道", subData === undefined ? false : subData.irregular)
+            ui.textField("ミサイルとなるエンティティ", "minecraft:", subData === undefined ? "minecraft:" : subData.mob)
+            ui.textField("速度(x)", "数値", subData === undefined ? "1" : `${subData.x}`)
+            ui.textField("速度(y)", "数値", subData === undefined ? "-0.5" : `${subData.y}`)
+            ui.textField("速度(z)", "数値", subData === undefined ? "1" : `${subData.z}`)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[6]) && !isNaN(formValues[7]) && !isNaN(formValues[8])) {
@@ -3093,6 +4134,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         z: formValues[8],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -3103,21 +4145,231 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "メッセージを送信する") {
             let ui = new ModalFormData()
             ui.title("メッセージの設定")
-            ui.textField("メッセージ", "入力欄")
+            ui.textField("メッセージ", "入力欄", subData === undefined ? "" : subData.message)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
                     message: formValues[0],
                     id: ruleData.id
                 }
+                if (subData !== undefined) removeData(ruleData, index)
                 set(sender, ruleData, rule2)
+            })
+        }
+        else if (runData.displayName === "ルールをランダムで作成する") {
+            let ui = new ModalFormData()
+            ui.title("ルールの設定")
+            ui.slider("作成する数", 1, 10, 1, subData === undefined ? 5 : subData.amount)
+            ui.toggle("前のルールを全て削除してから作る", subData === undefined ? true : subData.delete)
+            ui.toggle("ランダムフィルター機能", subData === undefined ? false : subData.filter)
+            ui.toggle("ランダムな検知してからの実行間隔", subData === undefined ? false : subData.time)
+            ui.toggle("ランダムで条件に且つを追加する", subData === undefined ? false : subData.and)
+            ui.toggle("追加されたルールを表示する", subData === undefined ? true : subData.view)
+            ui.show(sender).then(({ formValues, canceled }) => {
+                if (canceled) return;
+                let rule2 = {
+                    amount: formValues[0],
+                    delete: formValues[1],
+                    filter: formValues[2],
+                    time: formValues[3],
+                    and: formValues[4],
+                    view: formValues[5],
+                    id: ruleData.id
+                }
+                if (subData !== undefined) removeData(ruleData, index)
+                set(sender, ruleData, rule2)
+            })
+        }
+        else if (runData.displayName === "ルールをランダムで削除する") {
+            let ui = new ModalFormData()
+            ui.title("ルールの設定")
+            ui.slider("削除する数", 1, 10, 1, subData === undefined ? 1 : subData.amount)
+            ui.toggle("削除されたルールを表示する", subData === undefined ? true : subData.view)
+            ui.show(sender).then(({ formValues, canceled }) => {
+                if (canceled) return;
+                let rule2 = {
+                    amount: formValues[0],
+                    view: formValues[1],
+                    id: ruleData.id
+                }
+                if (subData !== undefined) removeData(ruleData, index)
+                set(sender, ruleData, rule2)
+            })
+        }
+        else if (runData.displayName === "ネームタグを変更する") {
+            let ui = new ModalFormData()
+            ui.title("ネームタグの設定")
+            ui.textField("ネームタグ", "name", subData === undefined ? "" : subData.name)
+            ui.show(sender).then(({ formValues, canceled }) => {
+                if (canceled) return;
+                let rule2 = {
+                    name: formValues[0],
+                    id: ruleData.id
+                }
+                if (subData !== undefined) removeData(ruleData, index)
+                set(sender, ruleData, rule2)
+            })
+        }
+        else if (runData.displayName === "投擲物を飛ばす") {
+            let ui = new ModalFormData()
+            ui.title("投擲物の設定")
+            ui.textField("投擲物(エンティティ)", "minecraft:snowball", subData === undefined ? "" : subData.entity)
+            ui.textField("重力", "数値", subData === undefined ? "1.0" : subData.gravity)
+            ui.textField("x速度", "数値", subData === undefined ? "1.0" : subData.velocityX)
+            ui.textField("y速度", "数値", subData === undefined ? "1.0" : subData.velocityY)
+            ui.textField("z速度", "数値", subData === undefined ? "1.0" : subData.velocityZ)
+            ui.slider("不正確度", 0, 20, 1, subData === undefined ? 0 : subData.uncertainty)
+            ui.toggle("ランダムな方向に飛ばす", subData === undefined ? false : subData.random)
+            ui.toggle("地面に着いたら爆発", subData === undefined ? false : subData.explode)
+            ui.slider("最小威力", 0, 200, 1, subData === undefined ? 0 : subData.min)
+            ui.slider("最大威力", 0, 200, 1, subData === undefined ? 0 : subData.max)
+            ui.toggle("火力", subData === undefined ? false : subData.fire)
+            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
+            ui.show(sender).then(({ formValues, canceled }) => {
+                if (canceled) return;
+                if (formValues[0] !== undefined) {
+                    if (!isNaN(formValues[1]) && !isNaN(formValues[2]) && !isNaN(formValues[3]) && !isNaN(formValues[4])) {
+                        let rule2 = {
+                            entity: formValues[0],
+                            gravity: Number(formValues[1]),
+                            velocityX: Number(formValues[2]),
+                            velocityY: Number(formValues[3]),
+                            velocityZ: Number(formValues[4]),
+                            uncertainty: Number(formValues[5]),
+                            random: formValues[6],
+                            explode: formValues[7],
+                            min: formValues[8],
+                            max: formValues[9],
+                            fire: formValues[10],
+                            water: formValues[11],
+                            id: ruleData.id
+                        }
+                        if (subData !== undefined) removeData(ruleData, index)
+                        set(sender, ruleData, rule2)
+                    }
+                    else {
+                        sender.sendMessage("§c数字で入力してください！")
+                    }
+                }
+                else {
+                    sender.sendMessage("§cエンティティ名を入力してください！")
+                }
+            })
+        }
+        else if (runData.displayName === "騎乗させる") {
+            let ui = new ModalFormData()
+            ui.title("騎乗エンティティの設定")
+            ui.textField("騎乗先のエンティティ", "minecraft:horse", subData === undefined ? "" : subData.entity)
+            ui.textField("騎乗するエンティティ", "minecraft:horse", subData === undefined ? "" : subData.rideEntity)
+            ui.slider("繰り返し回数", 1, 10, 1, subData === undefined ? 1 : subData.count)
+            ui.toggle("騎乗したエンティティに騎乗する", subData === undefined ? true : subData.isRideEntity)
+            ui.show(sender).then(({ formValues, canceled }) => {
+                if (canceled) return;
+                if (formValues[0] !== undefined && formValues[1] !== undefined) {
+                    let rule2 = {
+                        entity: formValues[0],
+                        rideEntity: formValues[1],
+                        count: formValues[2],
+                        isRideEntity: formValues[3],
+                        id: ruleData.id
+                    }
+                    if (subData !== undefined) removeData(ruleData, index)
+                    set(sender, ruleData, rule2)
+                }
+                else {
+                    sender.sendMessage("§cエンティティ名を入力してください！")
+                }
+            })
+        }
+        else if (runData.displayName === "構造物を生成する") {
+            let ui = new ModalFormData()
+            ui.title("構造物の生成設定")
+            ui.textField("オフセット(範囲)\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
+            ui.textField("§aY", "数値", subData === undefined ? "0" : `${subData.y}`)
+            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
+            ui.textField("構造物名", "minecraft:", subData === undefined ? "minecraft:" : subData.place)
+            ui.toggle("featureRule", subData === undefined ? false : subData.isRule)
+            ui.show(sender).then(({ formValues, canceled }) => {
+                if (canceled) return;
+                if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
+                    if (formValues[3] !== undefined) {
+                        let rule2 = {
+                            x: Number(formValues[0]),
+                            y: Number(formValues[1]),
+                            z: Number(formValues[2]),
+                            place: formValues[3],
+                            isRule: formValues[4],
+                            id: ruleData.id
+                        }
+                        if (subData !== undefined) removeData(ruleData, index)
+                        set(sender, ruleData, rule2)
+                    }
+                    else {
+                        sender.sendMessage("§c構造物名を入力してください！")
+                    }
+                }
+                else {
+                    sender.sendMessage("§c数字で入力してください！")
+                }
+            })
+        }
+        else if (runData.displayName === "入力速度方向に飛ばす") {
+            let ui = new ModalFormData()
+            ui.title("入力速度設定")
+            ui.textField("§cx座標(数字記入)", "Num", subData === undefined ? "1" : `${subData.x}`)
+            ui.textField("§ey座標(数字記入)", "Num", subData === undefined ? "0.1" : `${subData.y}`)
+            ui.textField("§9z座標(数字記入)", "Num", subData === undefined ? "1" : `${subData.z}`)
+            ui.show(sender).then(({ formValues, canceled }) => {
+                if (canceled) return;
+                if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
+                    let rule2 = {
+                        x: Number(formValues[0]),
+                        y: Number(formValues[1]),
+                        z: Number(formValues[2]),
+                        id: ruleData.id
+                    }
+                    if (subData !== undefined) removeData(ruleData, index)
+                    set(sender, ruleData, rule2)
+                }
+                else {
+                    sender.sendMessage("§c数字で入力してください！")
+                }
+            })
+        }
+        else if (runData.displayName === "ランダムなストラクチャーを設置") {
+            let ui = new ModalFormData()
+            ui.title("ストラクチャーの生成設定")
+            ui.textField("オフセット(範囲)\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
+            ui.textField("§aY", "数値", subData === undefined ? "0" : `${subData.y}`)
+            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
+            ui.slider("完全性の範囲(最小)", 0, 1, 0.01, subData === undefined ? 1 : subData.random)
+            ui.dropdown("アニメーションモード", animate, subData === undefined ? 0 : subData.animation)
+            ui.textField(`アニメーション時間`, `秒数`, subData === undefined ? "0" : `${subData.sec}`)
+            ui.show(sender).then(({ formValues, canceled }) => {
+                if (canceled) return;
+                if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2]) && !isNaN(formValues[5])) {
+                    let rule2 = {
+                        x: Number(formValues[0]),
+                        y: Number(formValues[1]),
+                        z: Number(formValues[2]),
+                        random: formValues[3],
+                        animation: formValues[4],
+                        sec: Number(formValues[5]),
+                        id: ruleData.id
+                    }
+                    if (subData !== undefined) removeData(ruleData, index)
+                    set(sender, ruleData, rule2)
+                }
+                else {
+                    sender.sendMessage("§c数字で入力してください！")
+                }
             })
         }
         else if (runData.displayName === "デバッグ") {
             let ui = new ModalFormData()
             ui.title("開発者用デバッグ設定")
-            ui.textField("JavaScriptコード", "JavaScript")
-            ui.toggle("エラーを表示する", true)
+            ui.textField("JavaScriptコード", "JavaScript", subData === undefined ? "" : subData.script)
+            ui.toggle("エラーを表示する", subData === undefined ? true : subData.error)
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (formValues[0] !== undefined && formValues[0] !== "") {
@@ -3126,6 +4378,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         error: formValues[1],
                         id: ruleData.id
                     }
+                    if (subData !== undefined) removeData(ruleData, index)
                     set(sender, ruleData, rule2)
                 }
                 else {
@@ -3133,6 +4386,32 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                 }
             })
         }
+        // else if (runData.hasOwnProperty("pack")) {
+        //     try {
+        //         if (runData.pack === true) {
+        //             if (enableExpansionPack === true) {
+        //                 if (system_pack[ruleData.ruleId.run].subData.enable) {
+        //                     system_pack[ruleData.ruleId.run].subData.form(sender, runData, ruleData)
+        //                 }
+        //                 else {
+        //                     if (world.getDynamicProperty("CRC:rules")) {
+        //                         let RawRule = JSON.parse(world.getDynamicProperty("CRC:rules"))
+        //                         let ruea = RawRule.rule
+        //                         ruea.push(ruleData)
+        //                         const Rdata = {
+        //                             rule: ruea,
+        //                             subRule: RawRule.subRule
+        //                         }
+        //                         world.setDynamicProperty("CRC:rules", `${JSON.stringify(Rdata)}`)
+        //                         sender.sendMessage(`§aルールを作成しました。`)
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     } catch (e) {
+        //         world.sendMessage(`§c[Custom Rule Creator Pack Error] ${e}`)
+        //     }
+        // }
         else {
             if (world.getDynamicProperty("CRC:rules")) {
                 let RawRule = JSON.parse(world.getDynamicProperty("CRC:rules"))
@@ -3150,6 +4429,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
     else {
         try {
             const formValues = CallData;
+            let rules = [];
             for (let i = 0; i < formValues[0]; i++) {
                 let rule_obj;
                 if (formValues[2] === true) {
@@ -3178,6 +4458,20 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                             if: rulesData.id[ifs],
                             run: rules2Data.id[runs]
                         },
+                        detect: {
+                            redstonePower: {
+                                enable: false,
+                                above: false,
+                                below: false,
+                                power: 0
+                            },
+                            area: {
+                                enable: false,
+                                StartArea: null,
+                                EndArea: null,
+                                dim: "minecraft:overworld"
+                            }
+                        },
                         par: getRandom(1, 100),
                         time: formValues[3] === true ? getRandom(0, maxDetectedTriggerTime) : 0,
                         id: password(6)
@@ -3198,6 +4492,20 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         ruleId: {
                             if: rulesData.id[ifs],
                             run: rules2Data.id[runs]
+                        },
+                        detect: {
+                            redstonePower: {
+                                enable: formValues[6],
+                                above: formValues[7],
+                                below: formValues[8],
+                                power: formValues[9]
+                            },
+                            area: {
+                                enable: formValues[10],
+                                StartArea: null,
+                                EndArea: null,
+                                dim: "minecraft:overworld"
+                            }
                         },
                         par: getRandom(1, 100),
                         time: formValues[3] === true ? getRandom(0, maxDetectedTriggerTime) : 0,
@@ -3435,6 +4743,121 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                     }
                     setter(rule_obj, rule2_obj)
                 }
+                else if (rule2[rule_obj.run].displayName === "ルールをランダムで作成する") {
+                    let rule2_obj = {
+                        amount: getRandom(1, 10, true),
+                        delete: true,
+                        filter: getRandomBool(),
+                        time: getRandomBool(),
+                        and: getRandomBool(),
+                        view: getRandomBool(),
+                        id: rule_obj.id
+                    }
+                    setter(rule_obj, rule2_obj)
+                }
+                else if (rule2[rule_obj.run].displayName === "ルールをランダムで削除する") {
+                    let rule2_obj = {
+                        amount: getRandom(1, 10, true),
+                        view: getRandomBool(),
+                        id: rule_obj.id
+                    }
+                    setter(rule_obj, rule2_obj)
+                }
+                else if (rule2[rule_obj.run].displayName === "ネームタグを変更する") {
+                    let rule2_obj = {
+                        name: id(getRandom(0, 30)),
+                        id: rule_obj.id
+                    }
+                    setter(rule_obj, rule2_obj)
+                }
+                else if (rule2[rule_obj.run].displayName === "投擲物を飛ばす") {
+                    let rule2_obj = {
+                        entity: random[getRandom(0, random.length - 1)],
+                        gravity: getRandom(-10, 10, false),
+                        velocityX: getRandom(-20, 20, false),
+                        velocityY: getRandom(-20, 20, false),
+                        velocityZ: getRandom(-20, 20, false),
+                        uncertainty: getRandom(0, 20, false),
+                        random: getRandomBool(),
+                        explode: getRandomBool(),
+                        min: getRandom(0, 50),
+                        max: getRandom(0, 50),
+                        fire: getRandomBool(),
+                        water: getRandomBool(),
+                        id: rule_obj.id
+                    }
+                    setter(rule_obj, rule2_obj)
+                }
+                else if (rule2[rule_obj.run].displayName === "騎乗させる") {
+                    let rule2_obj = {
+                        entity: random[getRandom(0, random.length - 1)],
+                        rideEntity: random[getRandom(0, random.length - 1)],
+                        count: getRandom(1, 10, false),
+                        isRideEntity: getRandomBool(),
+                        id: rule_obj.id
+                    }
+                    setter(rule_obj, rule2_obj)
+                }
+                else if (rule2[rule_obj.run].displayName === "構造物を生成する") {
+                    let rule2_obj = {
+                        x: getRandom(-100, 100, true),
+                        y: getRandom(0, 320, true),
+                        z: getRandom(-100, 100, true),
+                        place: "minecraft:mountain_pine_tree_feature",
+                        isRule: false,
+                        id: rule_obj.id
+                    }
+                    setter(rule_obj, rule2_obj)
+                }
+                else if (rule2[rule_obj.run].displayName === "入力速度方向に飛ばす") {
+                    let rule2_obj = {
+                        x: getRandom(-5, 5, false),
+                        y: getRandom(-5, 5, false),
+                        z: getRandom(-5, 5, false),
+                        id: rule_obj.id
+                    }
+                    setter(rule_obj, rule2_obj)
+                }
+                // else if (rule2[rule_obj.run].displayName === "ランダムなストラクチャーを設置") {
+                //     let rule2_obj = {
+                //         x: getRandom(-100, 100, true),
+                //         y: getRandom(0, 320, true),
+                //         z: getRandom(-100, 100, true),
+                //         random: Math.random(),
+                //         animation: animate[getRandom(0, animate.length - 1)],
+                //         sec: getRandom(0.1, 300, false),
+                //         id: rule_obj.id
+                //     }
+                //     setter(rule_obj, rule2_obj)
+                // }
+                // else if (rule2[rule_obj.run].hasOwnProperty("pack")) {
+                //     try {
+                //         if (rule2[rule_obj.run].pack === true) {
+                //             if (enableExpansionPack === true) {
+                //                 if (system_pack[rule2[rule_obj.run].ruleId - getLastRuleId().index - 1].subData.enable) {
+                //                     if (system_pack[rule2[rule_obj.run].ruleId - getLastRuleId().index - 1].subData.randomize.IsRandomize) {
+                //                         system_pack[rule2[rule_obj.run].ruleId - getLastRuleId().index - 1].subData.randomize.randomRule(rule_obj)
+                //                     }
+                //                 }
+                //                 else {
+                //                     if (world.getDynamicProperty("CRC:rules")) {
+                //                         let RawRule = JSON.parse(world.getDynamicProperty("CRC:rules"))
+                //                         let ruea = RawRule.rule
+                //                         ruea.push(ruleData)
+                //                         const Rdata = {
+                //                             rule: ruea,
+                //                             subRule: RawRule.subRule
+                //                         }
+                //                         world.setDynamicProperty("CRC:rules", `${JSON.stringify(Rdata)}`)
+                //                         sender.sendMessage(`§aルールを作成しました。`)
+                //                     }
+                //                 }
+                //             }
+                //         }
+                //     } catch (e) {
+                //         world.sendMessage(`§c[Custom Rule Creator Pack Error] ${e}`)
+                //     }
+                // }
                 else {
                     if (world.getDynamicProperty("CRC:rules")) {
                         let RawRule = JSON.parse(world.getDynamicProperty("CRC:rules"))
@@ -3447,22 +4870,14 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                         world.setDynamicProperty("CRC:rules", `${JSON.stringify(Rdata)}`)
                     }
                 }
-                function setter(rule, rule2) {
-                    if (world.getDynamicProperty("CRC:rules")) {
-                        const d = JSON.parse(world.getDynamicProperty("CRC:rules"))
-                        const datarule = d.rule
-                        const datarule2 = d.subRule
-                        datarule2.push(rule2)
-                        datarule.push(rule)
-                        const data = {
-                            rule: datarule,
-                            subRule: datarule2
-                        }
-                        world.setDynamicProperty("CRC:rules", `${JSON.stringify(data)}`)
-                    }
-                }
+                rules.push(`§a- もし${rule[rule_obj.if + 1].displayName}かつ${ands.concat(s)[rule_obj.and]}なら${rule2[rule_obj.run].displayName}`)
             }
-            sender.sendMessage(`§aルールを${formValues[0]}個作成しました。`)
+            if (message) {
+                sender.sendMessage(`§aルールを${formValues[0]}個作成しました。`)
+            }
+            if (ruleView) {
+                sender.sendMessage(`§a追加されたルール: \n${rules.join("\n")}`)
+            }
         } catch (e) {
             world.sendMessage(`§c[Custom Rule Creator Pack Error] ${e}`)
         }
@@ -3471,58 +4886,14 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
 function findSubData(parse) {
     let dt = []
     let subrule = [];
-    if (parse.run === 0 ||
-        parse.run === 2 ||
-        parse.run === 4 ||
-        parse.run === 5 ||
-        parse.run === 6 ||
-        parse.run === 8 ||
-        parse.run === 9 ||
-        parse.run === 10 ||
-        parse.run === 12 ||
-        parse.run === 13 ||
-        parse.run === 15 ||
-        parse.run === 16 ||
-        parse.run === 17 ||
-        parse.run === 21 ||
-        parse.run === 22 ||
-        parse.run === 25 ||
-        parse.run === 26 ||
-        parse.run === 27 ||
-        parse.run === 28 ||
-        parse.run === 29 ||
-        parse.run === 30 ||
-        parse.run === 32 ||
-        parse.run === 34) {
+    if (rule2.find(r => r.ruleId === parse.ruleId.run).existsubData === true) {
+        const findData = rule2.find(r => r.ruleId === parse.ruleId.run)
         let subs;
         const sr = JSON.parse(world.getDynamicProperty("CRC:rules")).subRule
         sr.forEach((s) => {
             subrule.push(JSON.stringify(s))
         })
-        if (parse.run === 0) subs = subrule.filter((tag, i) => tag.startsWith(`{"max`))
-        if (parse.run === 2) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
-        if (parse.run === 4) subs = subrule.filter((tag, i) => tag.startsWith(`{"block`))
-        if (parse.run === 5) subs = subrule.filter((tag, i) => tag.startsWith(`{"damage`))
-        if (parse.run === 6) subs = subrule.filter((tag, i) => tag.startsWith(`{"spawn`))
-        if (parse.run === 8) subs = subrule.filter((tag, i) => tag.startsWith(`{"max`))
-        if (parse.run === 9) subs = subrule.filter((tag, i) => tag.startsWith(`{"time`))
-        if (parse.run === 10) subs = subrule.filter((tag, i) => tag.startsWith(`{"effectId`))
-        if (parse.run === 12) subs = subrule.filter((tag, i) => tag.startsWith(`{"imax`))
-        if (parse.run === 13) subs = subrule.filter((tag, i) => tag.startsWith(`{"hmax`))
-        if (parse.run === 15) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
-        if (parse.run === 16) subs = subrule.filter((tag, i) => tag.startsWith(`{"spawn`))
-        if (parse.run === 17) subs = subrule.filter((tag, i) => tag.startsWith(`{"command`))
-        if (parse.run === 18) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
-        if (parse.run === 21) subs = subrule.filter((tag, i) => tag.startsWith(`{"time`))
-        if (parse.run === 22) subs = subrule.filter((tag, i) => tag.startsWith(`{"time`))
-        if (parse.run === 25) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
-        if (parse.run === 26) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
-        if (parse.run === 27) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
-        if (parse.run === 28) subs = subrule.filter((tag, i) => tag.startsWith(`{"particle`))
-        if (parse.run === 29) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
-        if (parse.run === 30) subs = subrule.filter((tag, i) => tag.startsWith(`{"x`))
-        if (parse.run === 32) subs = subrule.filter((tag, i) => tag.startsWith(`{"imax`))
-        if (parse.run === 34) subs = subrule.filter((tag, i) => tag.startsWith(`{"message`))
+        subs = subrule.filter((tag, i) => tag.startsWith(`{"${findData.ruleDataJSON}`))
         subs.forEach((tag) => {
             dt.push(JSON.parse(tag))
         })
@@ -3537,18 +4908,52 @@ function findSubData(parse) {
         return undefined;
     }
 }
-function set(sender, rule, rule2, message = true) {
+function removeData(parse, j) {
+    const subr = findSubData(parse)
+    if (subr !== undefined) {
+        const maindatas = JSON.parse(world.getDynamicProperty("CRC:rules")).rule
+        const subdatas = JSON.parse(world.getDynamicProperty("CRC:rules")).subRule
+        const i = getIndex(subdatas, subr.subRule)
+        subdatas.splice(i, 1)
+        maindatas.splice(j, 1)
+        const resultData = {
+            rule: maindatas,
+            subRule: subdatas
+        }
+        world.setDynamicProperty("CRC:rules", JSON.stringify(resultData))
+    }
+    else {
+        const maindatas = JSON.parse(world.getDynamicProperty("CRC:rules")).rule
+        const subdatas = JSON.parse(world.getDynamicProperty("CRC:rules")).subRule
+        maindatas.splice(j, 1)
+        const resultData = {
+            rule: maindatas,
+            subRule: subdatas
+        }
+        world.setDynamicProperty("CRC:rules", JSON.stringify(resultData))
+    }
+}
+export function set(sender, rule, rule2, message = true) {
     if (world.getDynamicProperty("CRC:rules")) {
         const d = JSON.parse(world.getDynamicProperty("CRC:rules"))
         const datarule = d.rule
         const datarule2 = d.subRule
-        datarule2.push(rule2)
-        datarule.push(rule)
-        const data = {
-            rule: datarule,
-            subRule: datarule2
+        if (datarule.length <= maxCreateRule) {
+            datarule2.push(rule2)
+            datarule.push(rule)
+            const data = {
+                rule: datarule,
+                subRule: datarule2
+            }
+            world.setDynamicProperty("CRC:rules", `${JSON.stringify(data)}`)
         }
-        world.setDynamicProperty("CRC:rules", `${JSON.stringify(data)}`)
+        else {
+            const datas = {
+                rule: [],
+                subRule: []
+            }
+            world.setDynamicProperty("CRC:rules", JSON.stringify(datas))
+        }
         if (message) {
             sender.sendMessage(`§aルールを作成しました。`)
         }
@@ -3561,6 +4966,29 @@ function set(sender, rule, rule2, message = true) {
         world.setDynamicProperty("CRC:rules", `${JSON.stringify(data)}`)
         if (message) {
             sender.sendMessage(`§aルールを作成しました。`)
+        }
+    }
+}
+export function setter(rule, rule2) {
+    if (world.getDynamicProperty("CRC:rules")) {
+        const d = JSON.parse(world.getDynamicProperty("CRC:rules"))
+        const datarule = d.rule
+        const datarule2 = d.subRule
+        if (datarule.length <= maxCreateRule) {
+            datarule2.push(rule2)
+            datarule.push(rule)
+            const data = {
+                rule: datarule,
+                subRule: datarule2
+            }
+            world.setDynamicProperty("CRC:rules", `${JSON.stringify(data)}`)
+        }
+        else {
+            const datas = {
+                rule: [],
+                subRule: []
+            }
+            world.setDynamicProperty("CRC:rules", JSON.stringify(datas))
         }
     }
 }
@@ -3694,7 +5122,7 @@ export function loadSaveData(sender, savedata, parse = []) {
                                                                         })
                                                                         let data = []
                                                                         for (let i = 0; i < SaveData.ObjData.ObjectDataMemories.length; i++) {
-                                                                            data.push(`ルール${i + 1} : もし${rulesData.name[parse[i].if] ?? `Unknown ruleId ${parse[i].if + 1000}`}${rules2Data.name[parse[i].run] ?? `Unknown ruleId ${parse[i].run}`}\n`)
+                                                                            data.push(`ルール${i + 1} : もし${rulesData.name[parse[i].if] ?? `Unknown ruleId ${parse[i].if + 1000}`}${rules2Data.name[parse[i].ruleId.run] ?? `Unknown ruleId ${parse[i].run}`}\n`)
                                                                         }
                                                                         let ui = new MessageFormData()
                                                                         ui.title("読み込む")
@@ -3926,7 +5354,7 @@ export function loadOldSaveData(sender, savedata, parse = []) {
                                                                         })
                                                                         let data = []
                                                                         for (let i = 0; i < SaveData.ObjData.ObjectDataMemories.length; i++) {
-                                                                            data.push(`ルール${i + 1} : もし${rulesData.name[parse[i].if] ?? `Unknown ${parse[i].if}`}${rules2Data.name[parse[i].run] ?? `Unknown ${parse[i].run}`}\n`)
+                                                                            data.push(`ルール${i + 1} : もし${rulesData.name[parse[i].if] ?? `Unknown ${parse[i].if}`}${rules2Data.name[parse[i].ruleId.run] ?? `Unknown ${parse[i].run}`}\n`)
                                                                         }
                                                                         let ui = new MessageFormData()
                                                                         ui.title("読み込む")
@@ -3956,6 +5384,25 @@ export function loadOldSaveData(sender, savedata, parse = []) {
                                                                                         savedata.SaveData.Description.SaveDataVersion === "β1.5") {
                                                                                         ru.ruleId.if = rulesData.id[ru.if]
                                                                                         ru.ruleId.run = rules2Data.id[ru.run]
+                                                                                    }
+                                                                                    if (savedata.SaveData.Description.SaveDataVersion === "β1.0" ||
+                                                                                        savedata.SaveData.Description.SaveDataVersion === "β1.2" ||
+                                                                                        savedata.SaveData.Description.SaveDataVersion === "β1.5" ||
+                                                                                        savedata.SaveData.Description.SaveDataVersion === "pre-1.0") {
+                                                                                        ru.detect = {
+                                                                                            redstonePower: {
+                                                                                                enable: false,
+                                                                                                above: false,
+                                                                                                below: false,
+                                                                                                power: 0
+                                                                                            },
+                                                                                            area: {
+                                                                                                enable: false,
+                                                                                                StartArea: null,
+                                                                                                EndArea: null,
+                                                                                                dim: "minecraft:overworld"
+                                                                                            }
+                                                                                        }
                                                                                     }
                                                                                     if (rur !== null) {
                                                                                         set(sender, ru, rur, false)
