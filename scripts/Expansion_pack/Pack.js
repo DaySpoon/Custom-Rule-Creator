@@ -37,7 +37,7 @@ const pack = [
             form: function (sender = Player.prototype, owner = undefined, formData, runData, rule) {
                 let ui = new ModalFormData()
                 ui.title("スロット設定")
-                ui.slider("この値で検知", 0, 8, 1)
+                ui.slider("この値で検知", 0, 8, { defaultValue: 1 })
                 ui.show(sender).then(({ formValues, canceled }) => {
                     if (canceled) return;
                     rule.Slot = formValues[0];
@@ -67,7 +67,7 @@ const pack = [
                 let ui = new ModalFormData()
                 ui.title("特定のスコア設定")
                 ui.textField("このスコアで検知", "Scoreboard")
-                ui.slider("この値で検知", 1, 1000, 1)
+                ui.slider("この値で検知", 1, 1000, { defaultValue: 1 })
                 ui.show(sender).then(({ formValues, canceled }) => {
                     if (canceled) return;
                     if (formValues[0] !== undefined) {

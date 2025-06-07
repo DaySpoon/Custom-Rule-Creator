@@ -225,21 +225,21 @@ world.afterEvents.itemUse.subscribe(data => {
                             ui.dropdown("もし", ruleNames)
                             ui.dropdown("かつ", and)
                             ui.dropdown("これを実行", rules2Data.displayName)
-                            ui.divider()
-                            ui.toggle("フィルター機能", false)
-                            ui.slider("確率", 1, 100, 1, 100)
-                            ui.slider("検知してからの実行間隔(秒)", 0, maxDetectedTriggerTime, 1, 0)
-                            ui.label("高度な検知")
-                            ui.divider()
-                            ui.toggle("レッドストーンパワーが特定の値になった時に検知", false)
-                            ui.toggle("特定の値以上で検知", false)
-                            ui.toggle("特定の値以下で検知", false)
-                            ui.slider("レッドストーンパワー", 0, 15, 1)
-                            ui.divider()
-                            ui.toggle("特定のエリアで検知", false)
+                            ui.divider() //3
+                            ui.toggle("フィルター機能", { defaultValue: false })
+                            ui.slider("確率", 1, 100, { defaultValue: 100 })
+                            ui.slider("検知してからの実行間隔(秒)", 0, maxDetectedTriggerTime, { defaultValue: 0 })
+                            ui.label("高度な検知") //7
+                            ui.divider() //8
+                            ui.toggle("レッドストーンパワーが特定の値になった時に検知", { defaultValue: false })
+                            ui.toggle("特定の値以上で検知", { defaultValue: false })
+                            ui.toggle("特定の値以下で検知", { defaultValue: false })
+                            ui.slider("レッドストーンパワー", 0, 15)
+                            ui.divider() //13
+                            ui.toggle("特定のエリアで検知", { defaultValue: false })
                             ui.textField("特定のエリア(始点)", "0 0 0")
                             ui.textField("特定のエリア(終点)", "5 5 5")
-                            ui.dropdown("ディメンション", dims, dims.findIndex((d) => d === "minecraft:overworld"))
+                            ui.dropdown("ディメンション", dims, { defaultValueIndex: dims.findIndex((d) => d === "minecraft:overworld") })
                             ui.show(sender).then(({ formValues, canceled }) => {
                                 if (canceled) return;
                                 let rule = {
@@ -247,7 +247,7 @@ world.afterEvents.itemUse.subscribe(data => {
                                     run: formValues[2],
                                     and: formValues[1],
                                     filter: {
-                                        enable: formValues[3],
+                                        enable: formValues[4],
                                         except: false,
                                         entites: null
                                     },
@@ -257,26 +257,26 @@ world.afterEvents.itemUse.subscribe(data => {
                                     },
                                     detect: {
                                         redstonePower: {
-                                            enable: formValues[6],
-                                            above: formValues[7],
-                                            below: formValues[8],
-                                            power: formValues[9]
+                                            enable: formValues[9],
+                                            above: formValues[10],
+                                            below: formValues[11],
+                                            power: formValues[12]
                                         },
                                         area: {
-                                            enable: formValues[10],
+                                            enable: formValues[14],
                                             StartArea: null,
                                             EndArea: null,
-                                            dim: dims[formValues[13]]
+                                            dim: dims[formValues[17]]
                                         }
                                     },
-                                    par: formValues[4],
-                                    time: formValues[5],
+                                    par: formValues[5],
+                                    time: formValues[6],
                                     id: password(6)
                                 }
-                                if (formValues[10] === true) {
+                                if (formValues[14] === true) {
                                     try {
-                                        const sta = formValues[11].split(" ")
-                                        const ena = formValues[12].split(" ")
+                                        const sta = formValues[15].split(" ")
+                                        const ena = formValues[16].split(" ")
                                         if (!isNaN(sta[1]) && !isNaN(sta[2]) && !isNaN(ena[1]) && !isNaN(ena[2])) {
                                             const starea = { x: Number(sta[0]), y: Number(sta[1]), z: Number(sta[2]) }
                                             const enarea = { x: Number(ena[0]), y: Number(ena[1]), z: Number(ena[2]) }
@@ -296,11 +296,11 @@ world.afterEvents.itemUse.subscribe(data => {
                                         sender.sendMessage(`§c無効なエリア指定形式のため、エリア指定が無効になりました。`)
                                     }
                                 }
-                                if (formValues[3] === true) {
+                                if (formValues[4] === true) {
                                     let ui = new ModalFormData()
                                     ui.title("フィルター機能")
                                     ui.textField("エンティティId(複数追加可能)", "ex:minecraft:zombie,minecraft:creeper")
-                                    ui.toggle("上記のエンティティ以外を検知する", false)
+                                    ui.toggle("上記のエンティティ以外を検知する", {defaultValue: false})
                                     ui.show(sender).then(({ formValues, canceled }) => {
                                         if (canceled) return;
                                         if (isNaN(formValues[0])) {
@@ -375,7 +375,7 @@ world.afterEvents.itemUse.subscribe(data => {
                                 let ui = new ModalFormData()
                                 ui.title("§c削除")
                                 ui.dropdown("\n\n\n§c※送信を押すとすぐに削除されます。\n§rルールの削除", data)
-                                ui.toggle("全てのルールを削除", false)
+                                ui.toggle("全てのルールを削除", { defaultValue: false })
                                 ui.show(sender).then(({ formValues, canceled }) => {
                                     if (canceled) return;
                                     if (formValues[1]) {
@@ -423,11 +423,11 @@ world.afterEvents.itemUse.subscribe(data => {
                         else if (selection === 2) {
                             let ui = new ModalFormData()
                             ui.title("§eランダムなルール")
-                            ui.slider("作成する数", 1, 10, 1, 5)
-                            ui.toggle("前のルールを全て削除してから作る", false)
-                            ui.toggle("ランダムフィルター機能", false)
-                            ui.toggle("ランダムな検知してからの実行間隔", false)
-                            ui.toggle("ランダムで条件に且つを追加する", false)
+                            ui.slider("作成する数", 1, 10, { defaultValue: 5 })
+                            ui.toggle("前のルールを全て削除してから作る", { defaultValue: false })
+                            ui.toggle("ランダムフィルター機能", { defaultValue: false })
+                            ui.toggle("ランダムな検知してからの実行間隔", { defaultValue: false })
+                            ui.toggle("ランダムで条件に且つを追加する", { defaultValue: false })
                             ui.show(sender).then(({ formValues, canceled }) => {
                                 if (canceled) return;
                                 if (formValues[1]) {
@@ -453,24 +453,24 @@ world.afterEvents.itemUse.subscribe(data => {
                                     if (selection === 0) {
                                         let ui = new ModalFormData()
                                         ui.title("変更")
-                                        ui.dropdown("もし", ruleNames, edit.if)
-                                        ui.dropdown("かつ", and, edit.and)
-                                        ui.dropdown("これを実行", rules2Data.displayName, edit.run)
-                                        ui.divider()
-                                        ui.toggle("フィルター機能", edit.filter.enable)
-                                        ui.slider("確率", 1, 100, 1, edit.par)
-                                        ui.slider("検知してからの実行間隔(秒)", 0, maxDetectedTriggerTime, 1, edit.time)
-                                        ui.label("高度な検知")
-                                        ui.divider()
-                                        ui.toggle("レッドストーンパワーが特定の値になった時に検知", edit.detect.redstonePower.enable)
-                                        ui.toggle("特定の値以上で検知", edit.detect.redstonePower.above)
-                                        ui.toggle("特定の値以下で検知", edit.detect.redstonePower.below)
-                                        ui.slider("レッドストーンパワー", 0, 15, 1, edit.detect.redstonePower.power)
-                                        ui.divider()
-                                        ui.toggle("特定のエリアで検知", edit.detect.area.enable)
-                                        ui.textField("特定のエリア(始点)", "0 0 0", edit.detect.area.StartArea === null ? "" : `${edit.detect.area.StartArea.x} ${edit.detect.area.StartArea.y} ${edit.detect.area.StartArea.z}`)
-                                        ui.textField("特定のエリア(終点)", "5 5 5", edit.detect.area.EndArea === null ? "" : `${edit.detect.area.EndArea.x} ${edit.detect.area.EndArea.y} ${edit.detect.area.EndArea.z}`)
-                                        ui.dropdown("ディメンション", dims, dims.findIndex((d) => d === edit.detect.area.dim))
+                                        ui.dropdown("もし", ruleNames, { defaultValueIndex: edit.if })
+                                        ui.dropdown("かつ", and, { defaultValueIndex: edit.and })
+                                        ui.dropdown("これを実行", rules2Data.displayName, { defaultValueIndex: edit.run })
+                                        ui.divider() //3
+                                        ui.toggle("フィルター機能", { defaultValue: edit.filter.enable })
+                                        ui.slider("確率", 1, 100, { defaultValue: edit.par })
+                                        ui.slider("検知してからの実行間隔(秒)", 0, maxDetectedTriggerTime, { defaultValue: edit.time })
+                                        ui.label("高度な検知") //7
+                                        ui.divider() //8
+                                        ui.toggle("レッドストーンパワーが特定の値になった時に検知", { defaultValue: edit.detect.redstonePower.enable })
+                                        ui.toggle("特定の値以上で検知", { defaultValue: edit.detect.redstonePower.above })
+                                        ui.toggle("特定の値以下で検知", { defaultValue: edit.detect.redstonePower.below })
+                                        ui.slider("レッドストーンパワー", 0, 15, { defaultValue: edit.detect.redstonePower.power })
+                                        ui.divider() //13
+                                        ui.toggle("特定のエリアで検知", { defaultValue: edit.detect.area.enable })
+                                        ui.textField("特定のエリア(始点)", "0 0 0", { defaultValue: edit.detect.area.StartArea === null ? "" : `${edit.detect.area.StartArea.x} ${edit.detect.area.StartArea.y} ${edit.detect.area.StartArea.z}` })
+                                        ui.textField("特定のエリア(終点)", "5 5 5", { defaultValue: edit.detect.area.EndArea === null ? "" : `${edit.detect.area.EndArea.x} ${edit.detect.area.EndArea.y} ${edit.detect.area.EndArea.z}` })
+                                        ui.dropdown("ディメンション", dims, { defaultValueIndex: dims.findIndex((d) => d === edit.detect.area.dim) })
                                         ui.show(sender).then(({ formValues, canceled }) => {
                                             if (canceled) return;
                                             let rule = {
@@ -478,7 +478,7 @@ world.afterEvents.itemUse.subscribe(data => {
                                                 run: formValues[2],
                                                 and: formValues[1],
                                                 filter: {
-                                                    enable: formValues[3],
+                                                    enable: formValues[4],
                                                     except: edit.filter.except,
                                                     entites: null
                                                 },
@@ -488,26 +488,26 @@ world.afterEvents.itemUse.subscribe(data => {
                                                 },
                                                 detect: {
                                                     redstonePower: {
-                                                        enable: formValues[6],
-                                                        above: formValues[7],
-                                                        below: formValues[8],
-                                                        power: formValues[9]
+                                                        enable: formValues[9],
+                                                        above: formValues[10],
+                                                        below: formValues[11],
+                                                        power: formValues[12]
                                                     },
                                                     area: {
-                                                        enable: formValues[10],
+                                                        enable: formValues[14],
                                                         StartArea: null,
                                                         EndArea: null,
-                                                        dim: dims[formValues[13]]
+                                                        dim: dims[formValues[17]]
                                                     }
                                                 },
-                                                par: formValues[4],
-                                                time: formValues[5],
+                                                par: formValues[5],
+                                                time: formValues[6],
                                                 id: password(6)
                                             }
-                                            if (formValues[10] === true) {
+                                            if (formValues[14] === true) {
                                                 try {
-                                                    const sta = formValues[11].split(" ")
-                                                    const ena = formValues[12].split(" ")
+                                                    const sta = formValues[15].split(" ")
+                                                    const ena = formValues[16].split(" ")
                                                     if (!isNaN(sta[1]) && !isNaN(sta[2]) && !isNaN(ena[1]) && !isNaN(ena[2])) {
                                                         const starea = { x: Number(sta[0]), y: Number(sta[1]), z: Number(sta[2]) }
                                                         const enarea = { x: Number(ena[0]), y: Number(ena[1]), z: Number(ena[2]) }
@@ -527,11 +527,11 @@ world.afterEvents.itemUse.subscribe(data => {
                                                     sender.sendMessage(`§c無効なエリア指定形式のため、エリア指定が無効になりました。`)
                                                 }
                                             }
-                                            if (formValues[3] === true) {
+                                            if (formValues[4] === true) {
                                                 let ui = new ModalFormData()
                                                 ui.title("フィルター機能")
-                                                ui.textField("エンティティId(複数追加可能)", "ex:minecraft:zombie,minecraft:creeper", edit.filter.entites.join(","))
-                                                ui.toggle("上記のエンティティ以外を検知する", edit.filter.except)
+                                                ui.textField("エンティティId(複数追加可能)", "ex:minecraft:zombie,minecraft:creeper", { defaultValue: edit.filter.entites.join(",") })
+                                                ui.toggle("上記のエンティティ以外を検知する", { defaultValue: edit.filter.except })
                                                 ui.show(sender).then(({ formValues, canceled }) => {
                                                     if (canceled) return;
                                                     if (isNaN(formValues[0])) {
@@ -836,28 +836,28 @@ world.afterEvents.itemUse.subscribe(data => {
                     if (selection === 1) {
                         let ui = new ModalFormData()
                         ui.title("Config設定")
-                        ui.toggle("ブロックエンティティをイベント検知対象に含む", world.getDynamicProperty("FallingBlock"))
-                        ui.toggle("アイテムをイベント検知対象に含む(危険！)", world.getDynamicProperty("Item"))
-                        ui.toggle("経験値をイベント検知対象に含む(危険！)", world.getDynamicProperty("Xp"))
-                        ui.toggle("一定のモブ数を超えたらkillする", world.getDynamicProperty("EntityKill"))
-                        ui.divider()
-                        ui.slider("奈落判定の高さ", -70, 0, 1, world.getDynamicProperty("void_detect"))
-                        ui.slider("最高高度判定の高さ", 2, 320, 1, world.getDynamicProperty("sky_detect"))
-                        ui.slider("スポーン座標の高さ", -64, 320, 1, world.getDynamicProperty("spawnY"))
-                        ui.divider()
-                        ui.dropdown("複数検知エンティティ", label, world.getDynamicProperty("sp_detect"))
-                        ui.toggle("イベントの停止", world.getDynamicProperty("Stop"))
+                        ui.toggle("ブロックエンティティをイベント検知対象に含む", { defaultValue: world.getDynamicProperty("FallingBlock") })
+                        ui.toggle("アイテムをイベント検知対象に含む(危険！)", { defaultValue: world.getDynamicProperty("Item") })
+                        ui.toggle("経験値をイベント検知対象に含む(危険！)", { defaultValue: world.getDynamicProperty("Xp") })
+                        ui.toggle("一定のモブ数を超えたらkillする", { defaultValue: world.getDynamicProperty("EntityKill") })
+                        ui.divider() //4
+                        ui.slider("奈落判定の高さ", -70, 0, { defaultValue: world.getDynamicProperty("void_detect") })
+                        ui.slider("最高高度判定の高さ", 2, 320, { defaultValue: world.getDynamicProperty("sky_detect") })
+                        ui.slider("スポーン座標の高さ", -64, 320, { defaultValue: world.getDynamicProperty("spawnY") })
+                        ui.divider() //8
+                        ui.dropdown("複数検知エンティティ", label, { defaultValueIndex: world.getDynamicProperty("sp_detect") })
+                        ui.toggle("イベントの停止", { defaultValue: world.getDynamicProperty("Stop") })
                         ui.show(sender).then(({ formValues, canceled }) => {
                             if (canceled) return;
                             world.setDynamicProperty("FallingBlock", formValues[0])
                             world.setDynamicProperty("Item", formValues[1])
                             world.setDynamicProperty("Xp", formValues[2])
                             world.setDynamicProperty("EntityKill", formValues[3])
-                            world.setDynamicProperty("void_detect", formValues[4])
-                            world.setDynamicProperty("sky_detect", formValues[5])
-                            world.setDynamicProperty("spawnY", formValues[6])
-                            world.setDynamicProperty("sp_detect", formValues[7])
-                            world.setDynamicProperty("Stop", formValues[8])
+                            world.setDynamicProperty("void_detect", formValues[5])
+                            world.setDynamicProperty("sky_detect", formValues[6])
+                            world.setDynamicProperty("spawnY", formValues[7])
+                            world.setDynamicProperty("sp_detect", formValues[9])
+                            world.setDynamicProperty("Stop", formValues[10])
                             sender.sendMessage("§a設定を保存しました")
                         })
                     }
@@ -884,18 +884,18 @@ world.afterEvents.itemUse.subscribe(data => {
                         ui.dropdown("if", rulesData.name)
                         ui.dropdown("and", and)
                         ui.dropdown("run", rules2Data.name)
-                        ui.slider("ルールID(if)", rulesData.id[0], rulesData.id[rulesData.id.length - 1], 1)
-                        ui.slider("ルールID(run)", rules2Data.id[0], rules2Data.id[rules2Data.id.length - 1], 1)
+                        ui.slider("ルールID(if)", rulesData.id[0], rulesData.id[rulesData.id.length - 1])
+                        ui.slider("ルールID(run)", rules2Data.id[0], rules2Data.id[rules2Data.id.length - 1])
                         ui.toggle("フィルター")
                         ui.toggle("含まない")
                         ui.textField("Entities Id", "ids")
-                        ui.textField("発動までの時間", "Num", "1.0")
-                        ui.textField("確率", "Num", "100")
-                        ui.toggle("レッドストーンパワーが特定の値になった時に検知", false)
-                        ui.toggle("特定の値以上で検知", false)
-                        ui.toggle("特定の値以下で検知", false)
-                        ui.slider("レッドストーンパワー", 0, 15, 1)
-                        ui.toggle("特定のエリアで検知", false)
+                        ui.textField("発動までの時間", "Num", { defaultValue: "1.0" })
+                        ui.textField("確率", "Num", { defaultValue: "100" })
+                        ui.toggle("レッドストーンパワーが特定の値になった時に検知", { defaultValue: false })
+                        ui.toggle("特定の値以上で検知", { defaultValue: false })
+                        ui.toggle("特定の値以下で検知", { defaultValue: false })
+                        ui.slider("レッドストーンパワー", 0, 15, { defaultValue: 1 })
+                        ui.toggle("特定のエリアで検知", { defaultValue: false })
                         ui.textField("特定のエリア(始点)", "0 0 0")
                         ui.textField("特定のエリア(終点)", "5 5 5")
                         ui.show(sender).then(({ formValues, canceled }) => {
@@ -3597,8 +3597,8 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         if (runData.displayName === "重力を加える") {
             let ui = new ModalFormData()
             ui.title("重力の設定")
-            ui.textField("§cx座標(数字記入)", "Num", subData === undefined ? "" : `${subData.x}`)
-            ui.textField("§ew座標(数字記入)", "Num", subData === undefined ? "" : `${subData.w}`)
+            ui.textField("§cx座標(数字記入)", "Num", { defaultValue: subData === undefined ? "" : `${subData.x}` })
+            ui.textField("§ew座標(数字記入)", "Num", { defaultValue: subData === undefined ? "" : `${subData.w}` })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1])) {
@@ -3618,11 +3618,11 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ブロックを設置") {
             let ui = new ModalFormData()
             ui.title("ブロックの設定")
-            ui.textField("ブロック名", "stone", subData === undefined ? "" : subData.block)
-            ui.textField("オフセット\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
-            ui.textField("§aY", "数値", subData === undefined ? "-1" : `${subData.y}`)
-            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
-            ui.toggle("視点の先にブロックを設置する", subData === undefined ? "" : subData.view)
+            ui.textField("ブロック名", "stone", { defaultValue: subData === undefined ? "" : subData.block })
+            ui.textField("オフセット\n§cX", "数値", { defaultValue: subData === undefined ? "0" : `${subData.x}` })
+            ui.textField("§aY", "数値", { defaultValue: subData === undefined ? "-1" : `${subData.y}` })
+            ui.textField("§9Z", "数値", { defaultValue: subData === undefined ? "0" : `${subData.z}` })
+            ui.toggle("視点の先にブロックを設置する", { defaultValue: subData === undefined ? "" : subData.view })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[1]) && !isNaN(formValues[2]) && !isNaN(formValues[3])) {
@@ -3645,9 +3645,9 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ダメージを与える") {
             let ui = new ModalFormData()
             ui.title("ダメージ量設定")
-            ui.slider("ダメージ量", 0, 40, 1, subData === undefined ? 0 : subData.damage)
-            ui.dropdown("ケース", cause, 24, subData === undefined ? 0 : subData.causes)
-            ui.textField("タイプ", "minecraft:zombie", subData === undefined ? "minecraft:" : subData.entitytype)
+            ui.slider("ダメージ量", 0, 40, { defaultValue: subData === undefined ? 0 : subData.damage })
+            ui.dropdown("ケース", cause, { defaultValueIndex: subData === undefined ? 0 : subData.causes })
+            ui.textField("タイプ", "minecraft:zombie", { defaultValue: subData === undefined ? "minecraft:" : subData.entitytype })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (formValues[2] !== undefined && formValues[2] !== "") {
@@ -3673,7 +3673,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "エンティティをスポーン") {
             let ui = new ModalFormData()
             ui.title("スポーンさせるエンティティ")
-            ui.textField("エンティティID", "minecraft:zombie", subData === undefined ? "minecraft:" : subData.spawn)
+            ui.textField("エンティティID", "minecraft:zombie", { defaultValue: subData === undefined ? "minecraft:" : subData.spawn })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (isNaN(formValues[0])) {
@@ -3692,8 +3692,8 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "炎上させる") {
             let ui = new ModalFormData()
             ui.title("炎上設定")
-            ui.slider("継続時間", 1, 300, 1, subData === undefined ? 30 : subData.time)
-            ui.toggle("エフェクト", subData === undefined ? false : subData.effect)
+            ui.slider("継続時間", 1, 300, { defaultValue: subData === undefined ? 30 : subData.time, valueStep: 1 })
+            ui.toggle("エフェクト", { defaultValue: subData === undefined ? false : subData.effect })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -3708,9 +3708,9 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "エフェクトを付与する") {
             let ui = new ModalFormData()
             ui.title("付与するエフェクト")
-            ui.dropdown("エフェクトID", random2, subData === undefined ? 0 : subData.effectId)
-            ui.slider("継続時間", 1, 300, 1, subData === undefined ? 30 : subData.time)
-            ui.slider("レベル", 1, 255, 1, subData === undefined ? 1 : subData.level)
+            ui.dropdown("エフェクトID", random2, { defaultValueIndex: subData === undefined ? 0 : subData.effectId })
+            ui.slider("継続時間", 1, 300, { defaultValue: subData === undefined ? 30 : subData.time })
+            ui.slider("レベル", 1, 255, { defaultValue: subData === undefined ? 1 : subData.level })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -3726,10 +3726,10 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "爆発") {
             let ui = new ModalFormData()
             ui.title("爆発の設定")
-            ui.slider("最大威力", 0, 200, 1, subData === undefined ? 0 : subData.max)
-            ui.slider("最小威力", 0, 200, 1, subData === undefined ? 0 : subData.min)
-            ui.toggle("火力", subData === undefined ? false : subData.fire)
-            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
+            ui.slider("最大威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.max })
+            ui.slider("最小威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.min })
+            ui.toggle("火力", { defaultValue: subData === undefined ? false : subData.fire })
+            ui.toggle("水の貫通", { defaultValue: subData === undefined ? false : subData.water })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -3746,11 +3746,11 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "打ち上げる") {
             let ui = new ModalFormData()
             ui.title("打ち上げた時の爆発の設定")
-            ui.slider("最大威力", 0, 200, 1, subData === undefined ? 0 : subData.max)
-            ui.slider("最小威力", 0, 200, 1, subData === undefined ? 0 : subData.min)
-            ui.textField("上昇速度率", "1.0", subData === undefined ? "1.0" : subData.speed)
-            ui.toggle("火力", subData === undefined ? false : subData.fire)
-            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
+            ui.slider("最大威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.max })
+            ui.slider("最小威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.min })
+            ui.textField("上昇速度率", "1.0", { defaultValue: subData === undefined ? "1.0" : subData.speed })
+            ui.toggle("火力", { defaultValue: subData === undefined ? false : subData.fire })
+            ui.toggle("水の貫通", { defaultValue: subData === undefined ? false : subData.water })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[2])) {
@@ -3773,14 +3773,14 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "隕石を降らす") {
             let ui = new ModalFormData()
             ui.title("隕石の設定")
-            ui.slider("最大威力", 0, 200, 1, subData === undefined ? 0 : subData.imax)
-            ui.slider("最小威力", 0, 200, 1, subData === undefined ? 0 : subData.imin)
-            ui.toggle("火力", subData === undefined ? false : subData.fire)
-            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
-            ui.textField("隕石となるエンティティ", "minecraft:", subData === undefined ? "minecraft:" : subData.mob)
-            ui.textField("速度(x)", "数値", subData === undefined ? "1" : `${subData.x}`)
-            ui.textField("速度(y)", "数値", subData === undefined ? "-0.5" : `${subData.y}`)
-            ui.textField("速度(z)", "数値", subData === undefined ? "1" : `${subData.z}`)
+            ui.slider("最大威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.imax })
+            ui.slider("最小威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.imin })
+            ui.toggle("火力", { defaultValue: subData === undefined ? false : subData.fire })
+            ui.toggle("水の貫通", { defaultValue: subData === undefined ? false : subData.water })
+            ui.textField("隕石となるエンティティ", "minecraft:", { defaultValue: subData === undefined ? "minecraft:" : subData.mob })
+            ui.textField("速度(x)", "数値", { defaultValue: subData === undefined ? "1" : `${subData.x}` })
+            ui.textField("速度(y)", "数値", { defaultValue: subData === undefined ? "-0.5" : `${subData.y}` })
+            ui.textField("速度(z)", "数値", { defaultValue: subData === undefined ? "1" : `${subData.z}` })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[5]) && !isNaN(formValues[6]) && !isNaN(formValues[7])) {
@@ -3806,10 +3806,10 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ホーミングさせる(プレイヤー以外)") {
             let ui = new ModalFormData()
             ui.title("ホーミングの設定")
-            ui.slider("衝突時の最大威力", 0, 200, 1, subData === undefined ? 0 : subData.hmax)
-            ui.slider("衝突時の最小威力", 0, 200, 1, subData === undefined ? 0 : subData.hmin)
-            ui.toggle("火力", subData === undefined ? false : subData.fire)
-            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
+            ui.slider("衝突時の最大威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.hmax })
+            ui.slider("衝突時の最小威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.hmin })
+            ui.toggle("火力", { defaultValue: subData === undefined ? false : subData.fire })
+            ui.toggle("水の貫通", { defaultValue: subData === undefined ? false : subData.water })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -3826,10 +3826,10 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ランダムなブロックを設置") {
             let ui = new ModalFormData()
             ui.title("ブロックの設定")
-            ui.textField("オフセット\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
-            ui.textField("§aY", "数値", subData === undefined ? "-1" : `${subData.y}`)
-            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
-            ui.toggle("視点の先にブロックを設置する", subData === undefined ? true : subData.view)
+            ui.textField("オフセット\n§cX", "数値", { defaultValue: subData === undefined ? "0" : `${subData.x}` })
+            ui.textField("§aY", "数値", { defaultValue: subData === undefined ? "-1" : `${subData.y}` })
+            ui.textField("§9Z", "数値", { defaultValue: subData === undefined ? "0" : `${subData.z}` })
+            ui.toggle("視点の先にブロックを設置する", { defaultValue: subData === undefined ? true : subData.view })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -3851,7 +3851,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "エンティティを置き換える") {
             let ui = new ModalFormData()
             ui.title("置き換えるエンティティ")
-            ui.textField("エンティティID", "minecraft:zombie", subData === undefined ? "minecraft:" : subData.spawn)
+            ui.textField("エンティティID", "minecraft:zombie", { defaultValue: subData === undefined ? "minecraft:" : subData.spawn })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (isNaN(formValues[0])) {
@@ -3870,7 +3870,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "コマンドを実行する") {
             let ui = new ModalFormData()
             ui.title("実行するコマンド")
-            ui.textField("コマンドの構文", "summon zombie ~~~", subData === undefined ? "" : subData.command)
+            ui.textField("コマンドの構文", "summon zombie ~~~", { defaultValue: subData === undefined ? "" : subData.command })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (formValues[0] !== undefined) {
@@ -3889,9 +3889,9 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ランダムなアイテムをスポーンさせる") {
             let ui = new ModalFormData()
             ui.title("ランダムなアイテムのスポーン設定")
-            ui.textField("オフセット(範囲)\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
-            ui.textField("§aY", "数値", subData === undefined ? "80" : `${subData.y}`)
-            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
+            ui.textField("オフセット(範囲)\n§cX", "数値", { defaultValue: subData === undefined ? "0" : `${subData.x}` })
+            ui.textField("§aY", "数値", { defaultValue: subData === undefined ? "80" : `${subData.y}` })
+            ui.textField("§9Z", "数値", { defaultValue: subData === undefined ? "0" : `${subData.z}` })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -3912,7 +3912,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "時間を早送りにする") {
             let ui = new ModalFormData()
             ui.title("時間の設定")
-            ui.slider("時間のスピード", 1, 2000, 1, subData === undefined ? 0 : subData.time)
+            ui.slider("時間のスピード", 1, 2000, { defaultValue: subData === undefined ? 0 : subData.time })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -3926,7 +3926,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "時間を巻き戻しにする") {
             let ui = new ModalFormData()
             ui.title("時間の設定")
-            ui.slider("時間のスピード", 1, 2000, 1, subData === undefined ? 0 : subData.time)
+            ui.slider("時間のスピード", 1, 2000, { defaultValue: subData === undefined ? 0 : subData.time })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -3940,12 +3940,12 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "テレポートする") {
             let ui = new ModalFormData()
             ui.title("テレポートの設定")
-            ui.textField("座標\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
-            ui.textField("§aY", "数値", subData === undefined ? "0" : `${subData.y}`)
-            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
-            ui.dropdown("ディメンション", DimensionTypes.getAll().map(d => d.typeId), subData === undefined ? 1 : subData.dimensiontype)
-            ui.toggle("速度の保持", subData === undefined ? false : subData.keep)
-            ui.toggle("テレポート先にブロックがあるか確認", subData === undefined ? false : subData.check)
+            ui.textField("座標\n§cX", "数値", { defaultValue: subData === undefined ? "0" : `${subData.x}` })
+            ui.textField("§aY", "数値", { defaultValue: subData === undefined ? "0" : `${subData.y}` })
+            ui.textField("§9Z", "数値", { defaultValue: subData === undefined ? "0" : `${subData.z}` })
+            ui.dropdown("ディメンション", DimensionTypes.getAll().map(d => d.typeId), { defaultValueIndex: subData === undefined ? 1 : subData.dimensiontype })
+            ui.toggle("速度の保持", { defaultValue: subData === undefined ? false : subData.keep })
+            ui.toggle("テレポート先にブロックがあるか確認", { defaultValue: subData === undefined ? false : subData.check })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -3969,11 +3969,11 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "アイテムをスポーンさせる") {
             let ui = new ModalFormData()
             ui.title("アイテムのスポーン設定")
-            ui.textField("オフセット(範囲)\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
-            ui.textField("§aY", "数値", "80", subData === undefined ? "80" : `${subData.y}`)
-            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
-            ui.textField("アイテム名", "minecraft:diamond", subData === undefined ? "" : subData.item)
-            ui.slider("個数", 1, 64, 1, subData === undefined ? 0 : subData.amount)
+            ui.textField("オフセット(範囲)\n§cX", "数値", { defaultValue: subData === undefined ? "0" : `${subData.x}` })
+            ui.textField("§aY", "数値", "80", { defaultValue: subData === undefined ? "80" : `${subData.y}` })
+            ui.textField("§9Z", "数値", { defaultValue: subData === undefined ? "0" : `${subData.z}` })
+            ui.textField("アイテム名", "minecraft:diamond", { defaultValue: subData === undefined ? "" : subData.item })
+            ui.slider("個数", 1, 64, { defaultValue: subData === undefined ? 0 : subData.amount })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -4001,12 +4001,12 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ランダムな範囲でテレポートする") {
             let ui = new ModalFormData()
             ui.title("テレポートの設定")
-            ui.textField("座標(範囲)\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
-            ui.textField("§aY", "数値", subData === undefined ? "20" : `${subData.y}`)
-            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
-            ui.dropdown("ディメンション", DimensionTypes.getAll().map(d => d.typeId), subData === undefined ? 1 : subData.dimensiontype)
-            ui.toggle("速度の保持", subData === undefined ? false : subData.keep)
-            ui.toggle("テレポート先にブロックがあるか確認", subData === undefined ? false : subData.check)
+            ui.textField("座標(範囲)\n§cX", "数値", { defaultValue: subData === undefined ? "0" : `${subData.x}` })
+            ui.textField("§aY", "数値", { defaultValue: subData === undefined ? "20" : `${subData.y}` })
+            ui.textField("§9Z", "数値", { defaultValue: subData === undefined ? "0" : `${subData.z}` })
+            ui.dropdown("ディメンション", DimensionTypes.getAll().map(d => d.typeId), { defaultValueIndex: subData === undefined ? 1 : subData.dimensiontype })
+            ui.toggle("速度の保持", { defaultValue: subData === undefined ? false : subData.keep })
+            ui.toggle("テレポート先にブロックがあるか確認", { defaultValue: subData === undefined ? false : subData.check })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -4030,9 +4030,9 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "速度を加える(プレイヤー以外)") {
             let ui = new ModalFormData()
             ui.title("速度の設定")
-            ui.textField("§cx座標(数字記入)", "Num", subData === undefined ? "" : `${subData.x}`)
-            ui.textField("§ey座標(数字記入)", "Num", subData === undefined ? "" : `${subData.y}`)
-            ui.textField("§9z座標(数字記入)", "Num", subData === undefined ? "" : `${subData.z}`)
+            ui.textField("§cx座標(数字記入)", "Num", { defaultValue: subData === undefined ? "" : `${subData.x}` })
+            ui.textField("§ey座標(数字記入)", "Num", { defaultValue: subData === undefined ? "" : `${subData.y}` })
+            ui.textField("§9z座標(数字記入)", "Num", { defaultValue: subData === undefined ? "" : `${subData.z}` })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -4053,11 +4053,11 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "パーティクルを表示する") {
             let ui = new ModalFormData()
             ui.title("パーティクルの設定")
-            ui.textField("パーティクル名", "minecraft:", subData === undefined ? "" : subData.particle)
-            ui.textField("表示する相対座標\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
-            ui.textField("§aY", "数値", subData === undefined ? "0" : `${subData.y}`)
-            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
-            ui.toggle("全員に表示する", subData === undefined ? true : subData.visible)
+            ui.textField("パーティクル名", "minecraft:", { defaultValue: subData === undefined ? "" : subData.particle })
+            ui.textField("表示する相対座標\n§cX", "数値", { defaultValue: subData === undefined ? "0" : `${subData.x}` })
+            ui.textField("§aY", "数値", { defaultValue: subData === undefined ? "0" : `${subData.y}` })
+            ui.textField("§9Z", "数値", { defaultValue: subData === undefined ? "0" : `${subData.z}` })
+            ui.toggle("全員に表示する", { defaultValue: subData === undefined ? true : subData.visible })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (formValues[0] !== undefined) {
@@ -4085,10 +4085,10 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ランダムなパーティクルを表示する") {
             let ui = new ModalFormData()
             ui.title("ランダムなパーティクルの設定")
-            ui.textField("表示する相対座標\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
-            ui.textField("§aY", "数値", subData === undefined ? "0" : `${subData.y}`)
-            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
-            ui.toggle("全員に表示する", subData === undefined ? true : subData.visible)
+            ui.textField("表示する相対座標\n§cX", "数値", { defaultValue: subData === undefined ? "0" : `${subData.x}` })
+            ui.textField("§aY", "数値", { defaultValue: subData === undefined ? "0" : `${subData.y}` })
+            ui.textField("§9Z", "数値", { defaultValue: subData === undefined ? "0" : `${subData.z}` })
+            ui.toggle("全員に表示する", { defaultValue: subData === undefined ? true : subData.visible })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -4110,15 +4110,15 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "エンティティをミサイルにする") {
             let ui = new ModalFormData()
             ui.title("エンティティミサイルの設定")
-            ui.slider("最大威力", 0, 200, 1, subData === undefined ? 0 : subData.imax)
-            ui.slider("最小威力", 0, 200, 1, subData === undefined ? 0 : subData.imin)
-            ui.toggle("火力", subData === undefined ? false : subData.fire)
-            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
-            ui.toggle("不規則な軌道", subData === undefined ? false : subData.irregular)
-            ui.textField("ミサイルとなるエンティティ", "minecraft:", subData === undefined ? "minecraft:" : subData.mob)
-            ui.textField("速度(x)", "数値", subData === undefined ? "1" : `${subData.x}`)
-            ui.textField("速度(y)", "数値", subData === undefined ? "-0.5" : `${subData.y}`)
-            ui.textField("速度(z)", "数値", subData === undefined ? "1" : `${subData.z}`)
+            ui.slider("最大威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.imax })
+            ui.slider("最小威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.imin })
+            ui.toggle("火力", { defaultValue: subData === undefined ? false : subData.fire })
+            ui.toggle("水の貫通", { defaultValue: subData === undefined ? false : subData.water })
+            ui.toggle("不規則な軌道", { defaultValue: subData === undefined ? false : subData.irregular })
+            ui.textField("ミサイルとなるエンティティ", "minecraft:", { defaultValue: subData === undefined ? "minecraft:" : subData.mob })
+            ui.textField("速度(x)", "数値", { defaultValue: subData === undefined ? "1" : `${subData.x}` })
+            ui.textField("速度(y)", "数値", { defaultValue: subData === undefined ? "-0.5" : `${subData.y}` })
+            ui.textField("速度(z)", "数値", { defaultValue: subData === undefined ? "1" : `${subData.z}` })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[6]) && !isNaN(formValues[7]) && !isNaN(formValues[8])) {
@@ -4145,7 +4145,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "メッセージを送信する") {
             let ui = new ModalFormData()
             ui.title("メッセージの設定")
-            ui.textField("メッセージ", "入力欄", subData === undefined ? "" : subData.message)
+            ui.textField("メッセージ", "入力欄", { defaultValue: subData === undefined ? "" : subData.message })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -4159,12 +4159,12 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ルールをランダムで作成する") {
             let ui = new ModalFormData()
             ui.title("ルールの設定")
-            ui.slider("作成する数", 1, 10, 1, subData === undefined ? 5 : subData.amount)
-            ui.toggle("前のルールを全て削除してから作る", subData === undefined ? true : subData.delete)
-            ui.toggle("ランダムフィルター機能", subData === undefined ? false : subData.filter)
-            ui.toggle("ランダムな検知してからの実行間隔", subData === undefined ? false : subData.time)
-            ui.toggle("ランダムで条件に且つを追加する", subData === undefined ? false : subData.and)
-            ui.toggle("追加されたルールを表示する", subData === undefined ? true : subData.view)
+            ui.slider("作成する数", 1, 10, { defaultValue: subData === undefined ? 5 : subData.amount })
+            ui.toggle("前のルールを全て削除してから作る", { defaultValue: subData === undefined ? true : subData.delete })
+            ui.toggle("ランダムフィルター機能", { defaultValue: subData === undefined ? false : subData.filter })
+            ui.toggle("ランダムな検知してからの実行間隔", { defaultValue: subData === undefined ? false : subData.time })
+            ui.toggle("ランダムで条件に且つを追加する", { defaultValue: subData === undefined ? false : subData.and })
+            ui.toggle("追加されたルールを表示する", { defaultValue: subData === undefined ? true : subData.view })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -4183,8 +4183,8 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ルールをランダムで削除する") {
             let ui = new ModalFormData()
             ui.title("ルールの設定")
-            ui.slider("削除する数", 1, 10, 1, subData === undefined ? 1 : subData.amount)
-            ui.toggle("削除されたルールを表示する", subData === undefined ? true : subData.view)
+            ui.slider("削除する数", 1, 10, { defaultValue: subData === undefined ? 1 : subData.amount })
+            ui.toggle("削除されたルールを表示する", { defaultValue: subData === undefined ? true : subData.view })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -4199,7 +4199,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ネームタグを変更する") {
             let ui = new ModalFormData()
             ui.title("ネームタグの設定")
-            ui.textField("ネームタグ", "name", subData === undefined ? "" : subData.name)
+            ui.textField("ネームタグ", "name", { defaultValue: subData === undefined ? "" : subData.name })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 let rule2 = {
@@ -4213,18 +4213,18 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "投擲物を飛ばす") {
             let ui = new ModalFormData()
             ui.title("投擲物の設定")
-            ui.textField("投擲物(エンティティ)", "minecraft:snowball", subData === undefined ? "" : subData.entity)
-            ui.textField("重力", "数値", subData === undefined ? "1.0" : subData.gravity)
-            ui.textField("x速度", "数値", subData === undefined ? "1.0" : subData.velocityX)
-            ui.textField("y速度", "数値", subData === undefined ? "1.0" : subData.velocityY)
-            ui.textField("z速度", "数値", subData === undefined ? "1.0" : subData.velocityZ)
-            ui.slider("不正確度", 0, 20, 1, subData === undefined ? 0 : subData.uncertainty)
-            ui.toggle("ランダムな方向に飛ばす", subData === undefined ? false : subData.random)
-            ui.toggle("地面に着いたら爆発", subData === undefined ? false : subData.explode)
-            ui.slider("最小威力", 0, 200, 1, subData === undefined ? 0 : subData.min)
-            ui.slider("最大威力", 0, 200, 1, subData === undefined ? 0 : subData.max)
-            ui.toggle("火力", subData === undefined ? false : subData.fire)
-            ui.toggle("水の貫通", subData === undefined ? false : subData.water)
+            ui.textField("投擲物(エンティティ)", "minecraft:snowball", { defaultValue: subData === undefined ? "" : subData.entity })
+            ui.textField("重力", "数値", { defaultValue: subData === undefined ? "1.0" : subData.gravity })
+            ui.textField("x速度", "数値", { defaultValue: subData === undefined ? "1.0" : subData.velocityX })
+            ui.textField("y速度", "数値", { defaultValue: subData === undefined ? "1.0" : subData.velocityY })
+            ui.textField("z速度", "数値", { defaultValue: subData === undefined ? "1.0" : subData.velocityZ })
+            ui.slider("不正確度", 0, 20, { defaultValue: subData === undefined ? 0 : subData.uncertainty })
+            ui.toggle("ランダムな方向に飛ばす", { defaultValue: subData === undefined ? false : subData.random })
+            ui.toggle("地面に着いたら爆発", { defaultValue: subData === undefined ? false : subData.explode })
+            ui.slider("最小威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.min })
+            ui.slider("最大威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.max })
+            ui.toggle("火力", { defaultValue: subData === undefined ? false : subData.fire })
+            ui.toggle("水の貫通", { defaultValue: subData === undefined ? false : subData.water })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (formValues[0] !== undefined) {
@@ -4259,10 +4259,10 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "騎乗させる") {
             let ui = new ModalFormData()
             ui.title("騎乗エンティティの設定")
-            ui.textField("騎乗先のエンティティ", "minecraft:horse", subData === undefined ? "" : subData.entity)
-            ui.textField("騎乗するエンティティ", "minecraft:horse", subData === undefined ? "" : subData.rideEntity)
-            ui.slider("繰り返し回数", 1, 10, 1, subData === undefined ? 1 : subData.count)
-            ui.toggle("騎乗したエンティティに騎乗する", subData === undefined ? true : subData.isRideEntity)
+            ui.textField("騎乗先のエンティティ", "minecraft:horse", { defaultValue: subData === undefined ? "" : subData.entity })
+            ui.textField("騎乗するエンティティ", "minecraft:horse", { defaultValue: subData === undefined ? "" : subData.rideEntity })
+            ui.slider("繰り返し回数", 1, 10, { defaultValue: subData === undefined ? 1 : subData.count })
+            ui.toggle("騎乗したエンティティに騎乗する", { defaultValue: subData === undefined ? true : subData.isRideEntity })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (formValues[0] !== undefined && formValues[1] !== undefined) {
@@ -4284,11 +4284,11 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "構造物を生成する") {
             let ui = new ModalFormData()
             ui.title("構造物の生成設定")
-            ui.textField("オフセット(範囲)\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
-            ui.textField("§aY", "数値", subData === undefined ? "0" : `${subData.y}`)
-            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
-            ui.textField("構造物名", "minecraft:", subData === undefined ? "minecraft:" : subData.place)
-            ui.toggle("featureRule", subData === undefined ? false : subData.isRule)
+            ui.textField("オフセット(範囲)\n§cX", "数値", { defaultValue: subData === undefined ? "0" : `${subData.x}` })
+            ui.textField("§aY", "数値", { defaultValue: subData === undefined ? "0" : `${subData.y}` })
+            ui.textField("§9Z", "数値", { defaultValue: subData === undefined ? "0" : `${subData.z}` })
+            ui.textField("構造物名", "minecraft:", { defaultValue: subData === undefined ? "minecraft:" : subData.place })
+            ui.toggle("featureRule", { defaultValue: subData === undefined ? false : subData.isRule })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -4316,9 +4316,9 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "入力速度方向に飛ばす") {
             let ui = new ModalFormData()
             ui.title("入力速度設定")
-            ui.textField("§cx座標(数字記入)", "Num", subData === undefined ? "1" : `${subData.x}`)
-            ui.textField("§ey座標(数字記入)", "Num", subData === undefined ? "0.1" : `${subData.y}`)
-            ui.textField("§9z座標(数字記入)", "Num", subData === undefined ? "1" : `${subData.z}`)
+            ui.textField("§cx座標(数字記入)", "Num", { defaultValue: subData === undefined ? "1" : `${subData.x}` })
+            ui.textField("§ey座標(数字記入)", "Num", { defaultValue: subData === undefined ? "0.1" : `${subData.y}` })
+            ui.textField("§9z座標(数字記入)", "Num", { defaultValue: subData === undefined ? "1" : `${subData.z}` })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2])) {
@@ -4339,12 +4339,12 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "ランダムなストラクチャーを設置") {
             let ui = new ModalFormData()
             ui.title("ストラクチャーの生成設定")
-            ui.textField("オフセット(範囲)\n§cX", "数値", subData === undefined ? "0" : `${subData.x}`)
-            ui.textField("§aY", "数値", subData === undefined ? "0" : `${subData.y}`)
-            ui.textField("§9Z", "数値", subData === undefined ? "0" : `${subData.z}`)
-            ui.slider("完全性の範囲(最小)", 0, 1, 0.01, subData === undefined ? 1 : subData.random)
-            ui.dropdown("アニメーションモード", animate, subData === undefined ? 0 : subData.animation)
-            ui.textField(`アニメーション時間`, `秒数`, subData === undefined ? "0" : `${subData.sec}`)
+            ui.textField("オフセット(範囲)\n§cX", "数値", { defaultValue: subData === undefined ? "0" : `${subData.x}` })
+            ui.textField("§aY", "数値", { defaultValue: subData === undefined ? "0" : `${subData.y}` })
+            ui.textField("§9Z", "数値", { defaultValue: subData === undefined ? "0" : `${subData.z}` })
+            ui.slider("完全性の範囲(最小)", 0, 1, { defaultValue: subData === undefined ? 1 : subData.random, valueStep: 0.01 })
+            ui.dropdown("アニメーションモード", animate, { defaultValueIndex: subData === undefined ? 0 : subData.animation })
+            ui.textField(`アニメーション時間`, `秒数`, { defaultValue: subData === undefined ? "0" : `${subData.sec}` })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (!isNaN(formValues[0]) && !isNaN(formValues[1]) && !isNaN(formValues[2]) && !isNaN(formValues[5])) {
@@ -4368,8 +4368,8 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
         else if (runData.displayName === "デバッグ") {
             let ui = new ModalFormData()
             ui.title("開発者用デバッグ設定")
-            ui.textField("JavaScriptコード", "JavaScript", subData === undefined ? "" : subData.script)
-            ui.toggle("エラーを表示する", subData === undefined ? true : subData.error)
+            ui.textField("JavaScriptコード", "JavaScript", { defaultValue: subData === undefined ? "" : subData.script })
+            ui.toggle("エラーを表示する", { defaultValue: subData === undefined ? true : subData.error })
             ui.show(sender).then(({ formValues, canceled }) => {
                 if (canceled) return;
                 if (formValues[0] !== undefined && formValues[0] !== "") {
