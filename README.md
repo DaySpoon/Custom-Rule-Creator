@@ -1,6 +1,8 @@
-![addon](https://media.discordapp.net/attachments/1115220489141497908/1365931317744631879/httpsdiscord.cominviteWuVMQbYaxt_1.png?ex=680f1a2b&is=680dc8ab&hm=fb28b59f12e2f1fe14c468ba561f01e3bd079e6b2ebdd53645f9ce7bb38fe6d6&=&format=webp&quality=lossless&width=1000&height=550)
-# Custom Rule Creator Addon 1.0!! 🔨
-### 1.0 正式!
+![addon](https://media.discordapp.net/attachments/1115220489141497908/1391077766174347354/httpsdiscord.cominviteWuVMQbYaxt_2.png?ex=686a95a0&is=68694420&hm=9471b8a720a86fe0bfab2dc0e84c69e6ead7e582fb79deeda58be31cdc9a16be&=&format=webp&quality=lossless&width=1000&height=550)
+# Custom Rule Creator Addon 1.2!! 🔨
+### 1.2!
+最新版に対応！
+### 1.0(正式)
 100個以上の検知・更なる実行や高度な検知機能・編集まで！
 * [詳しいアップデート内容](https://github.com/DaySpoon/Custom-Rule-Creator/releases/latest)
 
