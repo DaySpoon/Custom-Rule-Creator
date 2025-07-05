@@ -10,10 +10,10 @@ import { Entity, EntityDamageCause, system, world } from "@minecraft/server"
 export function getRuleIdList() {
     let id = []
     let id2 = []
-    rule.sort((a,b) => a.ruleId - b.ruleId).forEach(ruleid => {
+    rule.sort((a, b) => a.ruleId - b.ruleId).forEach(ruleid => {
         id.push(ruleid.ruleId)
     })
-    rule2.sort((a,b) => a.ruleId - b.ruleId).forEach(ruleid => {
+    rule2.sort((a, b) => a.ruleId - b.ruleId).forEach(ruleid => {
         id2.push(ruleid.ruleId)
     })
     id.sort((a, b) => a - b)
@@ -27,8 +27,8 @@ export function getRuleIdList() {
 */
 export function getLastRuleId() {
     let id = []
-    rule2.sort((a,b) => a.ruleId - b.ruleId).forEach(ruleid => {
-        if(!ruleid.hasOwnProperty("pack")) id.push(ruleid.ruleId)
+    rule2.sort((a, b) => a.ruleId - b.ruleId).forEach(ruleid => {
+        if (!ruleid.hasOwnProperty("pack")) id.push(ruleid.ruleId)
     })
     id.sort((a, b) => a - b)
     return {
@@ -1385,6 +1385,34 @@ export const rule = [
         visible: true,
         type: {}
     },
+    {
+        displayName: "権限がカスタムなら",
+        nameSpace: "CRC",
+        ruleId: 1170,
+        visible: true,
+        type: {}
+    },
+    {
+        displayName: "権限がメンバーなら",
+        nameSpace: "CRC",
+        ruleId: 1171,
+        visible: true,
+        type: {}
+    },
+    {
+        displayName: "権限がビジターなら",
+        nameSpace: "CRC",
+        ruleId: 1172,
+        visible: true,
+        type: {}
+    },
+    {
+        displayName: "インベントリ内に変化が起きたら",
+        nameSpace: "CRC",
+        ruleId: 1173,
+        visible: true,
+        type: {}
+    },
     // {
     //     displayName: "足元のブロックが空気なら",
     //     nameSpace: "CRC",
@@ -1430,70 +1458,70 @@ export const rule = [
     {
         displayName: "10秒おきに",
         nameSpace: "CRC",
-        ruleId: 1170,
+        ruleId: 1174,
         visible: true,
         type: {}
     },
     {
         displayName: "30秒おきに",
         nameSpace: "CRC",
-        ruleId: 1171,
+        ruleId: 1175,
         visible: true,
         type: {}
     },
     {
         displayName: "60秒おきに",
         nameSpace: "CRC",
-        ruleId: 1172,
+        ruleId: 1176,
         visible: true,
         type: {}
     },
     {
         displayName: "5分おきに",
         nameSpace: "CRC",
-        ruleId: 1173,
+        ruleId: 1177,
         visible: true,
         type: {}
     },
     {
         displayName: "10分おきに",
         nameSpace: "CRC",
-        ruleId: 1174,
+        ruleId: 1178,
         visible: true,
         type: {}
     },
     {
         displayName: "30分おきに",
         nameSpace: "CRC",
-        ruleId: 1175,
+        ruleId: 1179,
         visible: true,
         type: {}
     },
     {
         displayName: "Empty rule",
         nameSpace: "CRC",
-        ruleId: 1176,
+        ruleId: 1180,
         visible: false,
         type: {}
     },
     {
         displayName: "Empty rule 2",
         nameSpace: "CRC",
-        ruleId: 1177,
+        ruleId: 1181,
         visible: false,
         type: {}
     },
     {
         displayName: "Empty rule 3",
         nameSpace: "CRC",
-        ruleId: 1178,
+        ruleId: 1182,
         visible: false,
         type: {}
     },
     {
         displayName: "Empty rule 4",
         nameSpace: "CRC",
-        ruleId: 1179,
+        ruleId: 1183,
         visible: false,
         type: {}
     }
@@ -1604,7 +1632,7 @@ export const rule2 = [
         ruleDataJSON: `imax`
     },
     {
-        displayName: "ホーミングさせる(プレイヤー以外)",
+        displayName: "ホーミングさせる",
         nameSpace: "CRC",
         ruleId: 13,
         visible: true,
@@ -1724,7 +1752,7 @@ export const rule2 = [
         ruleDataJSON: `x`
     },
     {
-        displayName: "速度を加える(プレイヤー以外)",
+        displayName: "速度を加える",
         nameSpace: "CRC",
         ruleId: 28,
         visible: true,
@@ -1868,7 +1896,7 @@ export const rule2 = [
         ruleDataJSON: `x`
     },
     {
-        displayName: {translate: 'commands.origin.server'},
+        displayName: { translate: 'commands.origin.server' },
         nameSpace: "CRC",
         ruleId: 46,
         visible: false,
@@ -1884,7 +1912,7 @@ export const rule2 = [
         ruleDataJSON: `x`
     },
     {
-        displayName: {translate: 'potion.harm'},
+        displayName: { translate: 'potion.harm' },
         nameSpace: "CRC",
         ruleId: 48,
         visible: false,

@@ -1,4 +1,4 @@
-import { world, system, WeatherType, ItemStack, MolangVariableMap, Player, BlockTypes, EffectTypes, EntityTypes, ItemTypes, WorldAfterEvents, EntityHurtAfterEvent, WorldBeforeEvents, Block, GameMode, DyeColor, Entity, EntityDamageCause, HudElement, HudElementsCount, EasingType, EffectType, DimensionTypes, DimensionType, PlatformType, MemoryTier, EquipmentSlot, EntityComponentTypes, InputMode, InputPermissionCategory, InputButton, ButtonState, Dimension, BlockVolume, GraphicsMode, InputInfo, MoonPhase, StructureAnimationMode, StructureRotation } from "@minecraft/server"
+import { world, system, WeatherType, ItemStack, MolangVariableMap, Player, BlockTypes, EffectTypes, EntityTypes, ItemTypes, WorldAfterEvents, EntityHurtAfterEvent, WorldBeforeEvents, Block, GameMode, DyeColor, Entity, EntityDamageCause, HudElement, HudElementsCount, EasingType, EffectType, DimensionTypes, DimensionType, PlatformType, MemoryTier, EquipmentSlot, EntityComponentTypes, InputMode, InputPermissionCategory, InputButton, ButtonState, Dimension, BlockVolume, GraphicsMode, InputInfo, MoonPhase, StructureAnimationMode, StructureRotation, PlayerPermissionLevel } from "@minecraft/server"
 import { ActionFormData, ModalFormData, MessageFormData } from "@minecraft/server-ui"
 import { EmergencySystemControl, EntityMaxDistance, EntityMinDistance, ExcludeGameModes, PlayerMaxDistance, PlayerMinDistance, enableAddonStatus, interval, maxCreateRule, maxDetectedTriggerTime, mobLimit } from "./config";
 import { pack } from "./Expansion_pack/Pack";
@@ -16,7 +16,7 @@ import playerUseChestBeforeEvent from "./lib/events/playerUseChestBeforeEvent";
 // 弄らないでください
 //定義
 
-const Version = "1.0"
+const Version = "1.2"
 const AddonName = "CRC"
 const label = [
     "all(デフォルト)",
@@ -152,7 +152,7 @@ world.afterEvents.itemUse.subscribe(data => {
     const item = data.itemStack.typeId
     const itemst = data.itemStack
     const sender = data.source
-    if (item === "minecraft:stick" && sender.isOp()) {
+    if (item === "minecraft:stick" && sender.playerPermissionLevel === PlayerPermissionLevel.Operator) {
         const dins = {
             a: "5",
             b: "g",
@@ -300,7 +300,7 @@ world.afterEvents.itemUse.subscribe(data => {
                                     let ui = new ModalFormData()
                                     ui.title("フィルター機能")
                                     ui.textField("エンティティId(複数追加可能)", "ex:minecraft:zombie,minecraft:creeper")
-                                    ui.toggle("上記のエンティティ以外を検知する", {defaultValue: false})
+                                    ui.toggle("上記のエンティティ以外を検知する", { defaultValue: false })
                                     ui.show(sender).then(({ formValues, canceled }) => {
                                         if (canceled) return;
                                         if (isNaN(formValues[0])) {
@@ -1221,11 +1221,20 @@ system.runInterval(() => {
                 if (sender.graphicsMode === GraphicsMode.Fancy) {
                     event(sender, first, 154)
                 }
-                if (sender.isOp()) {
+                if (sender.playerPermissionLevel === PlayerPermissionLevel.Operator) {
                     event(sender, first, 155)
                 }
                 else {
                     event(sender, first, 156)
+                }
+                if (sender.playerPermissionLevel === PlayerPermissionLevel.Custom) {
+                    event(sender, first, 170)
+                }
+                if (sender.playerPermissionLevel === PlayerPermissionLevel.Member) {
+                    event(sender, first, 171)
+                }
+                if (sender.playerPermissionLevel === PlayerPermissionLevel.Visitor) {
+                    event(sender, first, 172)
                 }
                 if (sender.dimension.id === "overworld") {
                     event(sender, first, 91)
@@ -1852,6 +1861,11 @@ playerUseChestBeforeEvent.subscribe((data) => {
         }
     }
 })
+world.afterEvents.playerInventoryItemChange.subscribe((data) => {
+    const first = JSON.parse(world.getDynamicProperty("CRC:rules")) ?? undefined
+    const sender = data.player
+    event(sender, first, 173)
+})
 /**
 * イベントデータを出力します
 * @param {Player} sender イベントのターゲット
@@ -2385,73 +2399,71 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                         }
                                                         else if (rule.ruleId.run === 13) {
                                                             try {
-                                                                if (sender.typeId !== "minecraft:player") {
-                                                                    let e = true;
-                                                                    if (world.getDynamicProperty("Item") === false) {
-                                                                        if (sender.typeId !== "minecraft:item") {
-                                                                            e = true
-                                                                        }
-                                                                        else {
-                                                                            e = false;
-                                                                        }
+                                                                let e = true;
+                                                                if (world.getDynamicProperty("Item") === false) {
+                                                                    if (sender.typeId !== "minecraft:item") {
+                                                                        e = true
                                                                     }
-                                                                    if (e === true) {
-                                                                        let se = [];
-                                                                        first.subRule.forEach((s) => {
-                                                                            se.push(JSON.stringify(s))
-                                                                        })
-                                                                        const subs = se.filter((tag, i) => tag.startsWith(`{"hmax":`))
-                                                                        let subs2 = []
-                                                                        subs.forEach((tag, i) => {
-                                                                            subs2.push(JSON.parse(tag))
-                                                                        })
-                                                                        const sub = subs2.find((sub, i) => sub.id === rule.id)
-                                                                        sender.applyImpulse({ x: 0, y: getRandom(1, 3.5), z: 0 })
-                                                                        world.getDimension(sender.dimension.id).playSound("firework.launch", sender.location, { volume: 1, pitch: 0.5 })
-                                                                        let a = system.runTimeout(() => {
-                                                                            let s = system.runInterval(() => {
-                                                                                if (sender !== undefined) {
-                                                                                    try {
-                                                                                        const entity = sender.dimension.getEntities({ closest: 1, minDistance: 1, location: sender.location })[0]
-                                                                                        if (entity !== undefined && entity.id !== sender.id) {
-                                                                                            let vec = {
-                                                                                                x: entity.location.x - sender.location.x,
-                                                                                                y: entity.location.y - sender.location.y,
-                                                                                                z: entity.location.z - sender.location.z
-                                                                                            }
-                                                                                            sender.applyImpulse(vec)
-                                                                                            const molang = new MolangVariableMap()
-                                                                                            molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
-                                                                                            sender.dimension.spawnParticle("minecraft:mobflame_single", { x: sender.location.x, y: sender.location.y, z: sender.location.z }, molang)
-                                                                                            sender.dimension.spawnParticle("minecraft:knockback_roar_particle", { x: sender.location.x, y: sender.location.y, z: sender.location.z }, molang)
-                                                                                            const target = sender.dimension.getEntities({ closest: 1, minDistance: 0.5, maxDistance: 2, location: sender.location })[0]
-                                                                                            if (target !== undefined && target.id !== sender.id) {
-                                                                                                system.clearRun(s)
-                                                                                                sender.dimension.createExplosion(sender.location, getRandom(sub.hmax, sub.hmin, false), { source: sender, causesFire: sub.fire, allowUnderwater: sub.water })
-                                                                                                system.runTimeout(() => {
-                                                                                                    system.clearRun(s)
-                                                                                                }, 20)
-                                                                                            }
+                                                                    else {
+                                                                        e = false;
+                                                                    }
+                                                                }
+                                                                if (e === true) {
+                                                                    let se = [];
+                                                                    first.subRule.forEach((s) => {
+                                                                        se.push(JSON.stringify(s))
+                                                                    })
+                                                                    const subs = se.filter((tag, i) => tag.startsWith(`{"hmax":`))
+                                                                    let subs2 = []
+                                                                    subs.forEach((tag, i) => {
+                                                                        subs2.push(JSON.parse(tag))
+                                                                    })
+                                                                    const sub = subs2.find((sub, i) => sub.id === rule.id)
+                                                                    sender.applyImpulse({ x: 0, y: getRandom(1, 3.5), z: 0 })
+                                                                    world.getDimension(sender.dimension.id).playSound("firework.launch", sender.location, { volume: 1, pitch: 0.5 })
+                                                                    let a = system.runTimeout(() => {
+                                                                        let s = system.runInterval(() => {
+                                                                            if (sender !== undefined) {
+                                                                                try {
+                                                                                    const entity = sender.dimension.getEntities({ closest: 1, minDistance: 1, location: sender.location })[0]
+                                                                                    if (entity !== undefined && entity.id !== sender.id) {
+                                                                                        let vec = {
+                                                                                            x: entity.location.x - sender.location.x,
+                                                                                            y: entity.location.y - sender.location.y,
+                                                                                            z: entity.location.z - sender.location.z
+                                                                                        }
+                                                                                        sender.applyImpulse(vec)
+                                                                                        const molang = new MolangVariableMap()
+                                                                                        molang.setColorRGBA(`variable.color`, { red: Math.random(), green: Math.random(), blue: Math.random(), alpha: Math.random() })
+                                                                                        sender.dimension.spawnParticle("minecraft:mobflame_single", { x: sender.location.x, y: sender.location.y, z: sender.location.z }, molang)
+                                                                                        sender.dimension.spawnParticle("minecraft:knockback_roar_particle", { x: sender.location.x, y: sender.location.y, z: sender.location.z }, molang)
+                                                                                        const target = sender.dimension.getEntities({ closest: 1, minDistance: 0.5, maxDistance: 2, location: sender.location })[0]
+                                                                                        if (target !== undefined && target.id !== sender.id) {
+                                                                                            system.clearRun(s)
+                                                                                            sender.dimension.createExplosion(sender.location, getRandom(sub.hmax, sub.hmin, false), { source: sender, causesFire: sub.fire, allowUnderwater: sub.water })
                                                                                             system.runTimeout(() => {
                                                                                                 system.clearRun(s)
-                                                                                            }, 100)
+                                                                                            }, 20)
                                                                                         }
-                                                                                        else {
+                                                                                        system.runTimeout(() => {
                                                                                             system.clearRun(s)
-                                                                                        }
-                                                                                    } catch (e) {
-
+                                                                                        }, 100)
                                                                                     }
+                                                                                    else {
+                                                                                        system.clearRun(s)
+                                                                                    }
+                                                                                } catch (e) {
+
                                                                                 }
-                                                                                else {
-                                                                                    system.clearRun(s)
-                                                                                }
-                                                                            })
-                                                                        }, 20)
-                                                                        system.runTimeout(() => {
-                                                                            system.clearRun(a)
-                                                                        }, 100)
-                                                                    }
+                                                                            }
+                                                                            else {
+                                                                                system.clearRun(s)
+                                                                            }
+                                                                        })
+                                                                    }, 20)
+                                                                    system.runTimeout(() => {
+                                                                        system.clearRun(a)
+                                                                    }, 100)
                                                                 }
                                                             } catch (e) {
 
@@ -2717,14 +2729,12 @@ export function event(sender = Player.prototype, first = Object, index, variable
                                                             })
                                                             const sub = subs2.find((sub, i) => sub.id === rule.id)
                                                             if (data !== undefined) {
-                                                                if (data.typeId !== "minecraft:player" && typeof data === Entity) {
+                                                                if (typeof data === Entity) {
                                                                     data.applyImpulse({ x: sub.x, y: sub.y, z: sub.z })
                                                                 }
                                                             }
                                                             else {
-                                                                if (sender.typeId !== "minecraft:player") {
-                                                                    sender.applyImpulse({ x: sub.x, y: sub.y, z: sub.z })
-                                                                }
+                                                                sender.applyImpulse({ x: sub.x, y: sub.y, z: sub.z })
                                                             }
                                                         }
                                                         else if (rule.ruleId.run === 29) {
@@ -3803,7 +3813,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                 }
             })
         }
-        else if (runData.displayName === "ホーミングさせる(プレイヤー以外)") {
+        else if (runData.displayName === "ホーミングさせる") {
             let ui = new ModalFormData()
             ui.title("ホーミングの設定")
             ui.slider("衝突時の最大威力", 0, 200, { defaultValue: subData === undefined ? 0 : subData.hmax })
@@ -4027,7 +4037,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                 }
             })
         }
-        else if (runData.displayName === "速度を加える(プレイヤー以外)") {
+        else if (runData.displayName === "速度を加える") {
             let ui = new ModalFormData()
             ui.title("速度の設定")
             ui.textField("§cx座標(数字記入)", "Num", { defaultValue: subData === undefined ? "" : `${subData.x}` })
@@ -4599,7 +4609,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                     }
                     setter(rule_obj, rule2_obj)
                 }
-                else if (rule2[rule_obj.run].displayName === "ホーミングさせる(プレイヤー以外)") {
+                else if (rule2[rule_obj.run].displayName === "ホーミングさせる") {
                     let rule2_obj = {
                         hmax: getRandom(6, 30),
                         hmin: getRandom(0, 5),
@@ -4691,7 +4701,7 @@ export function ruleData(sender, runData, ruleData, randomize = false, CallData 
                     }
                     setter(rule_obj, rule2_obj)
                 }
-                else if (rule2[rule_obj.run].displayName === "速度を加える(プレイヤー以外)") {
+                else if (rule2[rule_obj.run].displayName === "速度を加える") {
                     let rule2_obj = {
                         x: getRandom(-100, 100, false),
                         y: getRandom(-100, 100, false),
